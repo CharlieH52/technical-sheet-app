@@ -16,18 +16,32 @@ class SysData:
         self.os_product = self.WinProduct()
         self.os_arch = self.WinArch()
         self.user_acc_name = os.getlogin()
-        self.user_dom_name, _, _, = socket.gethostbyaddr(self.machine_name)
+        self.user_dom_name = self.HostNameInfo()
     
     def BytesConverter(self, total_Bytes):
         return total_Bytes / (1024 ** 3)
 
+    def HostNameInfo(self):
+        HostName = socket.gethostbyaddr(self.machine_name)[1]
+        if HostName == []:
+            CommandOut = subprocess.getoutput('systeminfo').split('\n')[1:-1]
+            SearchData = "Dominio"
+            for lines, item in enumerate(CommandOut):
+                if item == SearchData:
+                    self.FOutput = lines
+                    print(CommandOut[self.FOutput])
+                    return self.FOutput
+        else:
+            self.FOutput = print(f"Var Host: {HostName}")
+            return self.FOutput
+    
     def MoboModelInfo(self):
         CommandOut = subprocess.run(['wmic', 'baseboard', 'get', 'product'], capture_output=True, text=True)
         OutResult = CommandOut.stdout
 
         InfLines = OutResult.split('\n')
         self.ProductModel = InfLines[2].strip()
-        return f"{self.ProductModel}"
+        return self.ProductModel
     
     def MoboManufInfo(self):
         CommandOut = subprocess.run(['wmic', 'baseboard', 'get', 'manufacturer'], capture_output=True, text=True)
@@ -35,7 +49,7 @@ class SysData:
 
         InfLines = OutResult.split('\n')
         self.ManufInfo = InfLines[2].strip()
-        return f"{self.ManufInfo}"
+        return self.ManufInfo
 
     def CpuNameInfo(self):
         CommandOut = subprocess.run(['wmic', 'cpu', 'get', 'name'], capture_output=True, text=True)
@@ -43,7 +57,7 @@ class SysData:
 
         InfLines = OutResult.split('\n')
         self.cpu_name = InfLines[2].strip()
-        return f"{self.cpu_name}"
+        return self.cpu_name
     
     def WinProduct(self):
         CommandOut = subprocess.run(['wmic', 'os', 'get', 'caption'], capture_output=True, text=True)
@@ -51,7 +65,7 @@ class SysData:
 
         InfLines = OutResult.split('\n')
         self.os_product =InfLines[2].strip()
-        return f"{self.os_product}"
+        return self.os_product
     
     def WinArch(self):
         CommandOut = subprocess.run(['wmic', 'os', 'get', 'osarchitecture'], capture_output=True, text=True)
@@ -59,7 +73,7 @@ class SysData:
 
         InfLines = OutResult.split('\n')
         self.os_arch =InfLines[2].strip()
-        return f"{self.os_arch}"
+        return self.os_arch
 
 
     def PrintInfo(self):
