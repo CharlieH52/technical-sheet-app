@@ -6,4 +6,3 @@ insSysData = SysData()
 insSysData.PrintInfo()
 
 input("Presiona cualquier tecla para continuar...")
-

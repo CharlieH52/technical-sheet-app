@@ -6,6 +6,7 @@ import subprocess
 
 class SysData:
     def __init__(self):
+        self.machine_id = self.MachineID()
         self.machine_name = platform.node()                   
         self.machine_ip = socket.gethostbyname(self.machine_name)
         self.machine_ram, _, _, _, _, = psutil.virtual_memory()
@@ -21,20 +22,37 @@ class SysData:
     def BytesConverter(self, total_Bytes):
         return total_Bytes / (1024 ** 3)
 
+    # Search for a domain addres, if the system has't a domain...
+    # Execute the CMD code "Systeminfo" then clean the output and gives the GroupName.
     def HostNameInfo(self):
         HostName = socket.gethostbyaddr(self.machine_name)[1]
         if HostName == []:
             CommandOut = subprocess.getoutput('systeminfo').split('\n')[1:-1]
             SearchData = "Dominio"
-            for lines, item in enumerate(CommandOut):
-                if item == SearchData:
-                    self.FOutput = lines
-                    print(CommandOut[self.FOutput])
-                    return self.FOutput
+            for lineItem in CommandOut:
+                if SearchData in lineItem:
+                    self.FOutput = f"{self.machine_name}.{(lineItem.split(':')[1]).strip()}"
+            return self.FOutput
         else:
             self.FOutput = print(f"Var Host: {HostName}")
             return self.FOutput
     
+    # 
+    def MachineID(self):
+        keyRute = "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\SQMClient"
+        CommandOut = subprocess.getoutput(['reg', 'query', f'{keyRute}', '/v', 'MachineId']).split('\n')[1:-1]
+        self.machineid = CommandOut
+        SearchData = "-"
+        for linesID in CommandOut:
+            if SearchData in linesID:
+                self.machineid = linesID.split()
+                for SData in self.machineid:
+                    if SearchData in SData:
+                        self.machineid = SData.strip('{')
+                        self.machineid = self.machineid.strip('}')
+
+        return self.machineid    
+
     def MoboModelInfo(self):
         CommandOut = subprocess.run(['wmic', 'baseboard', 'get', 'product'], capture_output=True, text=True)
         OutResult = CommandOut.stdout
@@ -82,7 +100,7 @@ class SysData:
             f"Nombre del equipo: {self.machine_name}\n"
             f"Nombre de la cuenta: {self.user_acc_name}\n" 
             f"Nombre de usuario en el dominio: {self.user_dom_name}\n"
-            f"ID del dispositivo: \n"
+            f"ID del dispositivo: {self.machine_id}\n"
             f"Marca del equipo: {self.machine_mark}\n"
             f"Procesador: {self.machine_cpu}\n"
             f"Memoria RAM: {round(self.BytesConverter(self.machine_ram),0)} GB\n"
