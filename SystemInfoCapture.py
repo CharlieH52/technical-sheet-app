@@ -4,27 +4,27 @@ import psutil
 import socket
 import subprocess
 
-class SysData:
+class SystemInformationCatcher:
     def __init__(self):
-        self.machine_id = self.MachineID()
+        self.machine_id = self._MachineID()
         self.machine_name = platform.node()                   
         self.machine_ip = socket.gethostbyname(self.machine_name)
         self.machine_ram, _, _, _, _, = psutil.virtual_memory()
         self.machine_disk, _, _, _, = psutil.disk_usage("C:\\")
-        self.machine_mark = self.MoboManufInfo()
-        self.machine_mobo = self.MoboModelInfo()
-        self.machine_cpu = self.CpuNameInfo()
-        self.os_product = self.WinProduct()
-        self.os_arch = self.WinArch()
+        self.machine_mark = self._MoboManufInfo()
+        self.machine_mobo = self._MoboModelInfo()
+        self.machine_cpu = self._CpuNameInfo()
+        self.os_product = self._WinProduct()
+        self.os_arch = self._WinArch()
         self.user_acc_name = os.getlogin()
-        self.user_dom_name = self.HostNameInfo()
+        self.user_dom_name = self._HostNameInfo()
     
-    def BytesConverter(self, total_Bytes):
+    def _BytesConverter(self, total_Bytes):
         return total_Bytes / (1024 ** 3)
 
     # Search for a domain addres, if the system has't a domain...
     # Execute the CMD code "Systeminfo" then clean the output and gives the GroupName.
-    def HostNameInfo(self):
+    def _HostNameInfo(self):
         HostName = socket.gethostbyaddr(self.machine_name)[1]
         if HostName == []:
             CommandOut = subprocess.getoutput('systeminfo').split('\n')[1:-1]
@@ -32,16 +32,15 @@ class SysData:
             for lineItem in CommandOut:
                 if SearchData in lineItem:
                     self.FOutput = f"{self.machine_name}.{(lineItem.split(':')[1]).strip()}"
-            return self.FOutput
         else:
-            self.FOutput = print(f"Var Host: {HostName}")
-            return self.FOutput
+            self.FOutput = HostName
+        
+        return self.FOutput
     
-    # 
-    def MachineID(self):
+    # Search and consult a specific registry key for obtain Machine ID.
+    def _MachineID(self):
         keyRute = "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\SQMClient"
         CommandOut = subprocess.getoutput(['reg', 'query', f'{keyRute}', '/v', 'MachineId']).split('\n')[1:-1]
-        self.machineid = CommandOut
         SearchData = "-"
         for linesID in CommandOut:
             if SearchData in linesID:
@@ -53,47 +52,43 @@ class SysData:
 
         return self.machineid    
 
-    def MoboModelInfo(self):
-        CommandOut = subprocess.run(['wmic', 'baseboard', 'get', 'product'], capture_output=True, text=True)
-        OutResult = CommandOut.stdout
+    # Use the input command and clean the output for post use
+    def _CommandExecution(self, command_line):
+        Command_Process = subprocess.getoutput(command_line).split('\n')
+        self.result = Command_Process[2].strip()
+        return self.result
 
-        InfLines = OutResult.split('\n')
-        self.ProductModel = InfLines[2].strip()
+    def _MoboModelInfo(self):
+        Command_Args = ['wmic', 'baseboard', 'get', 'product']
+        self._CommandExecution(Command_Args)
+        self.ProductModel = self.result
         return self.ProductModel
     
-    def MoboManufInfo(self):
-        CommandOut = subprocess.run(['wmic', 'baseboard', 'get', 'manufacturer'], capture_output=True, text=True)
-        OutResult = CommandOut.stdout
+    def _MoboManufInfo(self):
+        Command_Args = ['wmic', 'baseboard', 'get', 'manufacturer']
+        self._CommandExecution(Command_Args)
+        self.MoboManufacturer = self.result
+        return self.MoboManufacturer
 
-        InfLines = OutResult.split('\n')
-        self.ManufInfo = InfLines[2].strip()
-        return self.ManufInfo
-
-    def CpuNameInfo(self):
-        CommandOut = subprocess.run(['wmic', 'cpu', 'get', 'name'], capture_output=True, text=True)
-        OutResult = CommandOut.stdout
-
-        InfLines = OutResult.split('\n')
-        self.cpu_name = InfLines[2].strip()
+    def _CpuNameInfo(self):
+        Command_Args = ['wmic', 'cpu', 'get', 'name']
+        self._CommandExecution(Command_Args)
+        self.cpu_name = self.result
         return self.cpu_name
     
-    def WinProduct(self):
-        CommandOut = subprocess.run(['wmic', 'os', 'get', 'caption'], capture_output=True, text=True)
-        OutResult = CommandOut.stdout
-
-        InfLines = OutResult.split('\n')
-        self.os_product =InfLines[2].strip()
+    def _WinProduct(self):
+        Command_Args = ['wmic', 'os', 'get', 'caption']
+        self._CommandExecution(Command_Args)
+        self.os_product = self.result
         return self.os_product
     
-    def WinArch(self):
-        CommandOut = subprocess.run(['wmic', 'os', 'get', 'osarchitecture'], capture_output=True, text=True)
-        OutResult = CommandOut.stdout
-
-        InfLines = OutResult.split('\n')
-        self.os_arch =InfLines[2].strip()
+    def _WinArch(self):
+        Command_Args = ['wmic', 'os', 'get', 'osarchitecture']
+        self._CommandExecution(Command_Args)
+        self.os_arch = self.result
         return self.os_arch
 
-
+    # Save very data in his respective variable space and print it.
     def PrintInfo(self):
         try:
             output = (
@@ -103,9 +98,9 @@ class SysData:
             f"ID del dispositivo: {self.machine_id}\n"
             f"Marca del equipo: {self.machine_mark}\n"
             f"Procesador: {self.machine_cpu}\n"
-            f"Memoria RAM: {round(self.BytesConverter(self.machine_ram),0)} GB\n"
+            f"Memoria RAM: {round(self._BytesConverter(self.machine_ram),0)} GB\n"
             f"Motherboard: {self.machine_mobo}\n"
-            f"Almacenamiento: {round(self.BytesConverter(self.machine_disk),0)} GB\n"
+            f"Almacenamiento: {round(self._BytesConverter(self.machine_disk),0)} GB\n"
             f"Dirección IP: {self.machine_ip}\n"
             f"Sistema Operativo: {self.os_product} {self.os_arch}\n"
             )

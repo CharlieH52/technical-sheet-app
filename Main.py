@@ -1,7 +1,6 @@
-from SystemInfoCapture import SysData
-from OfficesDB import OfficeID
+from SystemInfoCapture import SystemInformationCatcher
 
-insSysData = SysData()
+insSysData = SystemInformationCatcher()
 
 insSysData.PrintInfo()
 
