@@ -4,4 +4,4 @@ insSysData = SystemInformationCatcher()
 
 insSysData.PrintInfo()
 
-input("Presiona cualquier tecla para continuar...")
+#input("Presiona cualquier tecla para continuar...")

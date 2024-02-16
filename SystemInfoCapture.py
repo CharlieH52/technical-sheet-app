@@ -18,6 +18,7 @@ class SystemInformationCatcher:
         self.os_arch = self._WinArch()
         self.user_acc_name = os.getlogin()
         self.user_dom_name = self._HostNameInfo()
+        self.soft_anydesk = self._anydeskid()
     
     def _BytesConverter(self, total_Bytes):
         return total_Bytes / (1024 ** 3)
@@ -87,7 +88,29 @@ class SystemInformationCatcher:
         self._CommandExecution(Command_Args)
         self.os_arch = self.result
         return self.os_arch
+    
+    def _anydeskid(self):
+        folder_route = f"C:/Users/{self.user_acc_name}/AppData/Roaming/"
+        folder_name = "AnyDesk"
+        complete_directory = os.path.join(folder_route, folder_name)
+        file_name = "system.conf"
+        
+        try:
+            if os.path.exists(complete_directory) and os.path.isdir(complete_directory):
+                id_search = os.path.join(complete_directory, file_name)
+                try:
+                    with open(id_search, 'r') as file:
+                        for items in file.readlines():
+                            if ".id=" in items:
+                                self.soft_anydesk = items.split('=')[1]
+                except Exception as e:
+                    print(f"No se ha podido obtener el ID de AnyDesk. {e}")
 
+        except Exception as e:
+                print(f"ERROR: Anydesk NO ha sido instalado aun. {e}")
+        
+        return self.soft_anydesk
+    
     # Save very data in his respective variable space and print it.
     def PrintInfo(self):
         try:
@@ -103,12 +126,14 @@ class SystemInformationCatcher:
             f"Almacenamiento: {round(self._BytesConverter(self.machine_disk),0)} GB\n"
             f"Dirección IP: {self.machine_ip}\n"
             f"Sistema Operativo: {self.os_product} {self.os_arch}\n"
+            f"AnyDesk ID: {self.soft_anydesk}\n"
             )
             print(output)
         except Exception as e:
-            print("ERROR: No se pudo obtener la información solicitada...")
+            print(f"ERROR: No se pudo obtener la información solicitada... {e}")
+        
         try:
             with open(f"{self.machine_name}.txt","w") as file:
                 file.write(output)
         except Exception as e:
-            print("ERROR: No se puedo generar el archivo de salida...")
+            print(f"ERROR: No se puedo generar el archivo de salida... {e}")
