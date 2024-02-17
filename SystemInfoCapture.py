@@ -20,6 +20,7 @@ class SystemInformationCatcher:
         self.user_dom_name = self._HostNameInfo()
         self.soft_anydesk = self._anydeskid()
     
+    # Bytes converter
     def _BytesConverter(self, total_Bytes):
         return total_Bytes / (1024 ** 3)
 
@@ -40,7 +41,7 @@ class SystemInformationCatcher:
     
     # Search and consult a specific registry key for obtain Machine ID.
     def _MachineID(self):
-        keyRute = "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\SQMClient"
+        keyRute = r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\SQMClient"
         CommandOut = subprocess.getoutput(['reg', 'query', f'{keyRute}', '/v', 'MachineId']).split('\n')[1:-1]
         SearchData = "-"
         for linesID in CommandOut:
@@ -124,11 +125,11 @@ class SystemInformationCatcher:
             f"Memoria RAM: {round(self._BytesConverter(self.machine_ram),0)} GB\n"
             f"Motherboard: {self.machine_mobo}\n"
             f"Almacenamiento: {round(self._BytesConverter(self.machine_disk),0)} GB\n"
-            f"Dirección IP: {self.machine_ip}\n"
+            f"Direccion IP: {self.machine_ip}\n"
             f"Sistema Operativo: {self.os_product} {self.os_arch}\n"
             f"AnyDesk ID: {self.soft_anydesk}\n"
             )
-            print(output)
+            
         except Exception as e:
             print(f"ERROR: No se pudo obtener la información solicitada... {e}")
         
