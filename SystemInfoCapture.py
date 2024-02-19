@@ -100,15 +100,20 @@ class SystemInformationCatcher:
             if os.path.exists(complete_directory) and os.path.isdir(complete_directory):
                 id_search = os.path.join(complete_directory, file_name)
                 try:
-                    with open(id_search, 'r') as file:
-                        for items in file.readlines():
-                            if ".id=" in items:
-                                self.soft_anydesk = items.split('=')[1]
+                    if os.path.exists(id_search) and os.path.isfile(id_search):
+                        with open(id_search, 'r') as file:
+                            for items in file.readlines():
+                                if ".id=" in items:
+                                    self.soft_anydesk = items.split('=')[1]
+                    else:
+                        output_message = "AnyDesk no instalado."
+                        self.soft_anydesk = output_message
+
                 except Exception as e:
-                    print(f"No se ha podido obtener el ID de AnyDesk. {e}")
+                    print(f"El archivo con el ID de AnyDesk no ha sido encontrado. {e}")
 
         except Exception as e:
-                print(f"ERROR: Anydesk NO ha sido instalado aun. {e}")
+                print(f"No se ha encontrado la ruta \\AnyDesk {e}")
         
         return self.soft_anydesk
     
