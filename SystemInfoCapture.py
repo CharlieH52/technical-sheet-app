@@ -96,50 +96,35 @@ class SystemInformationCatcher:
         complete_directory = os.path.join(folder_route, folder_name)
         file_name = 'system.conf'
         
-        try:
-            if os.path.exists(complete_directory) and os.path.isdir(complete_directory):
-                id_search = os.path.join(complete_directory, file_name)
-                try:
-                    if os.path.exists(id_search) and os.path.isfile(id_search):
-                        with open(id_search, 'r') as file:
-                            for items in file.readlines():
-                                if '.id=' in items:
-                                    self.soft_anydesk = items.split('=')[1]
-                    else:
-                        output_message = 'AnyDesk no instalado.'
-                        self.soft_anydesk = output_message
-
-                except Exception as e:
-                    print(f'El archivo con el ID de AnyDesk no ha sido encontrado. {e}')
-
-        except Exception as e:
-                print(f'No se ha encontrado la ruta \\AnyDesk {e}')
+        if os.path.exists(complete_directory) and os.path.isdir(complete_directory):
+            id_search = os.path.join(complete_directory, file_name)
+            if os.path.exists(id_search) and os.path.isfile(id_search):
+                with open(id_search, 'r') as file:
+                    for items in file.readlines():
+                        if '.id=' in items:
+                            self.soft_anydesk = items.split('=')[1]
+            else:
+                output_message = 'AnyDesk no instalado.'
+                self.soft_anydesk = output_message
         
         return self.soft_anydesk
     
     # Save very data in his respective variable space and print it.
     def PrintInfo(self):
-        try:
-            output = (
-            f'Nombre del equipo: {self.machine_name}\n'
-            f'Nombre de la cuenta: {self.user_acc_name}\n' 
-            f'Nombre de usuario en el dominio: {self.user_dom_name}\n'
-            f'ID del dispositivo: {self.machine_id}\n'
-            f'Marca del equipo: {self.machine_mark}\n'
-            f'Procesador: {self.machine_cpu}\n'
-            f'Memoria RAM: {round(self._BytesConverter(self.machine_ram),0)} GB\n'
-            f'Motherboard: {self.machine_mobo}\n'
-            f'Almacenamiento: {round(self._BytesConverter(self.machine_disk),0)} GB\n'
-            f'Direccion IP: {self.machine_ip}\n'
-            f'Sistema Operativo: {self.os_product} {self.os_arch}\n'
-            f'AnyDesk ID: {self.soft_anydesk}\n'
-            )
-            
-        except Exception as e:
-            print(f'ERROR: No se pudo obtener la información solicitada... {e}')
+        output = (
+        f'Nombre del equipo: {self.machine_name}\n'
+        f'Nombre de la cuenta: {self.user_acc_name}\n' 
+        f'Nombre de usuario en el dominio: {self.user_dom_name}\n'
+        f'ID del dispositivo: {self.machine_id}\n'
+        f'Marca del equipo: {self.machine_mark}\n'
+        f'Procesador: {self.machine_cpu}\n'
+        f'Memoria RAM: {round(self._BytesConverter(self.machine_ram),0)} GB\n'
+        f'Motherboard: {self.machine_mobo}\n'
+        f'Almacenamiento: {round(self._BytesConverter(self.machine_disk),0)} GB\n'
+        f'Direccion IP: {self.machine_ip}\n'
+        f'Sistema Operativo: {self.os_product} {self.os_arch}\n'
+        f'AnyDesk ID: {self.soft_anydesk}\n'
+        )
         
-        try:
-            with open(f'{self.machine_name}.txt','w') as file:
-                file.write(output)
-        except Exception as e:
-            print(f'ERROR: No se puedo generar el archivo de salida... {e}')
+        with open(f'{self.machine_name}.txt','w') as file:
+            file.write(output)
