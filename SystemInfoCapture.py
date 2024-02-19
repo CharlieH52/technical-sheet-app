@@ -10,7 +10,7 @@ class SystemInformationCatcher:
         self.machine_name = platform.node()                   
         self.machine_ip = socket.gethostbyname(self.machine_name)
         self.machine_ram, _, _, _, _, = psutil.virtual_memory()
-        self.machine_disk, _, _, _, = psutil.disk_usage("C:\\")
+        self.machine_disk, _, _, _, = psutil.disk_usage('C:\\')
         self.machine_mark = self._MoboManufInfo()
         self.machine_mobo = self._MoboModelInfo()
         self.machine_cpu = self._CpuNameInfo()
@@ -25,15 +25,15 @@ class SystemInformationCatcher:
         return total_Bytes / (1024 ** 3)
 
     # Search for a domain addres, if the system has't a domain...
-    # Execute the CMD code "Systeminfo" then clean the output and gives the GroupName.
+    # Execute the CMD code 'Systeminfo' then clean the output and gives the GroupName.
     def _HostNameInfo(self):
         HostName = socket.gethostbyaddr(self.machine_name)[1]
         if HostName == []:
             CommandOut = subprocess.getoutput('systeminfo').split('\n')[1:-1]
-            SearchData = "Dominio"
+            SearchData = 'Dominio'
             for lineItem in CommandOut:
                 if SearchData in lineItem:
-                    self.FOutput = f"{self.machine_name}.{(lineItem.split(':')[1]).strip()}"
+                    self.FOutput = f'{self.machine_name}.{(lineItem.split(':')[1]).strip()}'
         else:
             self.FOutput = HostName
         
@@ -41,9 +41,9 @@ class SystemInformationCatcher:
     
     # Search and consult a specific registry key for obtain Machine ID.
     def _MachineID(self):
-        keyRute = r"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\SQMClient"
+        keyRute = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\SQMClient'
         CommandOut = subprocess.getoutput(['reg', 'query', f'{keyRute}', '/v', 'MachineId']).split('\n')[1:-1]
-        SearchData = "-"
+        SearchData = '-'
         for linesID in CommandOut:
             if SearchData in linesID:
                 self.machineid = linesID.split()
@@ -91,10 +91,10 @@ class SystemInformationCatcher:
         return self.os_arch
     
     def _anydeskid(self):
-        folder_route = f"C:/Users/{self.user_acc_name}/AppData/Roaming/"
-        folder_name = "AnyDesk"
+        folder_route = f'C:/Users/{self.user_acc_name}/AppData/Roaming/'
+        folder_name = 'AnyDesk'
         complete_directory = os.path.join(folder_route, folder_name)
-        file_name = "system.conf"
+        file_name = 'system.conf'
         
         try:
             if os.path.exists(complete_directory) and os.path.isdir(complete_directory):
@@ -103,17 +103,17 @@ class SystemInformationCatcher:
                     if os.path.exists(id_search) and os.path.isfile(id_search):
                         with open(id_search, 'r') as file:
                             for items in file.readlines():
-                                if ".id=" in items:
+                                if '.id=' in items:
                                     self.soft_anydesk = items.split('=')[1]
                     else:
-                        output_message = "AnyDesk no instalado."
+                        output_message = 'AnyDesk no instalado.'
                         self.soft_anydesk = output_message
 
                 except Exception as e:
-                    print(f"El archivo con el ID de AnyDesk no ha sido encontrado. {e}")
+                    print(f'El archivo con el ID de AnyDesk no ha sido encontrado. {e}')
 
         except Exception as e:
-                print(f"No se ha encontrado la ruta \\AnyDesk {e}")
+                print(f'No se ha encontrado la ruta \\AnyDesk {e}')
         
         return self.soft_anydesk
     
@@ -121,25 +121,25 @@ class SystemInformationCatcher:
     def PrintInfo(self):
         try:
             output = (
-            f"Nombre del equipo: {self.machine_name}\n"
-            f"Nombre de la cuenta: {self.user_acc_name}\n" 
-            f"Nombre de usuario en el dominio: {self.user_dom_name}\n"
-            f"ID del dispositivo: {self.machine_id}\n"
-            f"Marca del equipo: {self.machine_mark}\n"
-            f"Procesador: {self.machine_cpu}\n"
-            f"Memoria RAM: {round(self._BytesConverter(self.machine_ram),0)} GB\n"
-            f"Motherboard: {self.machine_mobo}\n"
-            f"Almacenamiento: {round(self._BytesConverter(self.machine_disk),0)} GB\n"
-            f"Direccion IP: {self.machine_ip}\n"
-            f"Sistema Operativo: {self.os_product} {self.os_arch}\n"
-            f"AnyDesk ID: {self.soft_anydesk}\n"
+            f'Nombre del equipo: {self.machine_name}\n'
+            f'Nombre de la cuenta: {self.user_acc_name}\n' 
+            f'Nombre de usuario en el dominio: {self.user_dom_name}\n'
+            f'ID del dispositivo: {self.machine_id}\n'
+            f'Marca del equipo: {self.machine_mark}\n'
+            f'Procesador: {self.machine_cpu}\n'
+            f'Memoria RAM: {round(self._BytesConverter(self.machine_ram),0)} GB\n'
+            f'Motherboard: {self.machine_mobo}\n'
+            f'Almacenamiento: {round(self._BytesConverter(self.machine_disk),0)} GB\n'
+            f'Direccion IP: {self.machine_ip}\n'
+            f'Sistema Operativo: {self.os_product} {self.os_arch}\n'
+            f'AnyDesk ID: {self.soft_anydesk}\n'
             )
             
         except Exception as e:
-            print(f"ERROR: No se pudo obtener la información solicitada... {e}")
+            print(f'ERROR: No se pudo obtener la información solicitada... {e}')
         
         try:
-            with open(f"{self.machine_name}.txt","w") as file:
+            with open(f'{self.machine_name}.txt','w') as file:
                 file.write(output)
         except Exception as e:
-            print(f"ERROR: No se puedo generar el archivo de salida... {e}")
+            print(f'ERROR: No se puedo generar el archivo de salida... {e}')

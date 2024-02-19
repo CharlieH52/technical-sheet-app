@@ -1,68 +1,95 @@
 import os
+import time
 
 from SystemInfoCapture import SystemInformationCatcher
 from Readme_Write import Readme
 
-insSysData = SystemInformationCatcher()
-HelpFile = Readme()
-
-script_directory = os.getcwd()
-db_folder = "DB_List"
-office_folder = ""
-new_folder = insSysData.machine_name 
-complete_directory = os.path.join(script_directory, db_folder)
-file_name = "DB_Dictionary.txt"
-dictionary = {}
-
-def _read_db():
-    file_directory = os.path.join(complete_directory, file_name)
+# This function reads the DB file .txt and fill the empty dictionary with the informatión that you need for organize the output files.
+def read_db(directory, file_name):
+    dictionary = {}
+    file_directory = os.path.join(directory, file_name)
     try:
         with open(file_directory, 'r') as file:
             for items in file.readlines():
                 key, name = items.strip().split(': ')
                 dictionary[key] = name
-    except FileNotFoundError:
-        print('No se encontro el archivo DB_Dictionary.txt')
+    except FileNotFoundError as e:
+        err_log = (
+            f'Falta el directorio de datos DB_Dictionary.txt, se ha generado un README en la ruta {file_directory}.\n'
+            f'{e}\n'
+        )
+        error_logs_print(err_log)
+    return dictionary        
 
-    except Exception as e:
-        print(f'No se pudo abrir el archivo. {e}')        
+# Takes the new route and makes the directory.
+def new_directory(current_directory, input_directory):
+    try:
+        directory = os.path.join(current_directory, input_directory)
+        if (os.path.exists(directory) and os.path.isdir(directory)) == False:
+            os.mkdir(directory)
+    except OSError as e:
+        err_log = f'No se pudo crear el directorio {directory}: {e}'
+        error_logs_print(err_log)
 
-def _new_directory(route):
-    office_rute = os.path.join(script_directory, route)
-    if (os.path.exists(office_rute) and os.path.isdir(office_rute)) == False:
-        os.mkdir(office_rute)
+# Read the device name and compare it with the dictionary to organize the outputs.
+def find_device_area(dictionary, code_name):
+    # If the device is not recognized in the DB, this will be the default output folder.
+    office_folder = 'DESCONOCIDO'               # Change this var for your default output folder.
 
-def _find_device_area():
-    office_folder = "DESCONOCIDO"
-
-    for index in dictionary:
-        if index in str(new_folder):
-            office_folder = dictionary[index]
+    for lines in dictionary:
+        if lines in str(code_name):
+            office_folder = dictionary[lines]
             break
 
     return office_folder
 
-def execute_program():
-    try:
-        if os.path.exists(complete_directory) and os.path.isdir(complete_directory):
-            _read_db()                                                                       # Open and read the DB_File.
-            try:
-                output_route = _find_device_area()                                           # Save the path for the next use.
-                _new_directory(output_route)                                                 # Makes the directory with the name area using the key in the device name if this exist.    
-            except Exception as e:
-                print(f'Ocurrio un problema al crear el directorio. {e}')
+def make_logs_folder(directory, logs_folder):
+    logs_directory = os.path.join(directory, logs_folder)
+    if (os.path.exists(logs_directory) and os.path.isdir(logs_directory)) == False:
+        new_directory(logs_directory)
+    else:
+        return logs_directory
 
-            os.chdir(output_route)                                                          # Change the working path.
-            insSysData.PrintInfo()                                                          # write the file with all device information.
-        else:
-            _new_directory(complete_directory)
-            try:
-                readme_file = os.path.join(complete_directory, "README.txt")
-                with open(readme_file, 'w') as file:
-                    file.write(HelpFile.write_txt_readme)
-            except Exception as e:
-                print(f'No se pudo generar el archivo de apoyo. {e}')
-    except Exception as e:
-        print(f'No se ha encontrado la ruta "\\DB_List", favor de crear el directorio. {e}')
+def error_logs_print(directory, logs_folder, error_log):
+    date = str(time.strftime('%d-%m-%Y_%H-%M-%S'))
+    log_name = f'E_LOG - {date}.txt'
+    error_directory = os.path.join(make_logs_folder(directory, logs_folder), log_name)
+    
+    with open(error_directory, 'w') as file:
+        file.write(error_log)
+    
+
+# Main function
+def execute_program():
+    # Hashtag (jaja)
+    device_name = SystemInformationCatcher()
+    help_file = Readme()
+
+    # Directories
+    script_directory = os.getcwd()
+    db_folder = 'DB_List'
+    logs_folder = 'LOGS'
+    code_name = device_name.machine_name
+    complete_directory = os.path.join(script_directory, db_folder)
+    logs_directory = os.path.join(script_directory, logs_folder)
+    
+    # File names
+    file_name = 'DB_Dictionary.txt'
+
+    if os.path.exists(complete_directory) and os.path.isdir(complete_directory):
+        read_db(complete_directory, file_name)
+        output_route = find_device_area(read_db(), code_name)
+        new_directory(script_directory, output_route)    
+        os.chdir(output_route)
+        device_name.PrintInfo()
+    else:
+        new_directory(complete_directory)
+        try:
+            readme_file = os.path.join(complete_directory, 'README.txt')
+            with open(readme_file, 'w') as file:
+                file.write(help_file.write_txt_readme)
+        except Exception as e:
+            err_log = f'No se pudo generar el archivo de apoyo. {e}'
+            error_logs_print(logs_directory, logs_folder, err_log)
 
 execute_program()
