@@ -7,7 +7,7 @@ class Readme:
             "¡¡¡Hello!!!\n"
             "This script needs the directory \\DB_List with a file named 'DB_Dictionary.txt'.\n"
             "[FORMAT for DB_Dictionary.txt]\n"
-            "0000: OFFICE\n"
+            "0000: PLACE_NAME\n"
             "\n"
             "[EXAMPLE]\n"
             "0101: HOTEL\n"
