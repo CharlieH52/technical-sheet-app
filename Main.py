@@ -1,8 +1,10 @@
 import os
 
 from SystemInfoCapture import SystemInformationCatcher
+from Readme_Write import Readme
 
 insSysData = SystemInformationCatcher()
+HelpFile = Readme()
 
 script_directory = os.getcwd()
 db_folder = "DB_List"
@@ -12,7 +14,7 @@ complete_directory = os.path.join(script_directory, db_folder)
 file_name = "DB_Dictionary.txt"
 dictionary = {}
 
-def read_db():
+def _read_db():
     file_directory = os.path.join(complete_directory, file_name)
     try:
         with open(file_directory, 'r') as file:
@@ -25,12 +27,12 @@ def read_db():
     except Exception as e:
         print(f'No se pudo abrir el archivo. {e}')        
 
-def new_directory(route):
+def _new_directory(route):
     office_rute = os.path.join(script_directory, route)
     if (os.path.exists(office_rute) and os.path.isdir(office_rute)) == False:
         os.mkdir(office_rute)
 
-def find_device_area():
+def _find_device_area():
     office_folder = "DESCONOCIDO"
 
     for index in dictionary:
@@ -40,20 +42,27 @@ def find_device_area():
 
     return office_folder
 
-try:
-    if os.path.exists(complete_directory) and os.path.isdir(complete_directory):
-        read_db()                                                                       # Open and read the DB_File.
-        try:
-            output_route = find_device_area()                                           # Save the path for the next use.
-            new_directory(output_route)                                                 # Makes the directory with the name area using the key in the device name if this exist.    
-        except Exception as e:
-            print(f'Ocurrio un problema al crear el directorio. {e}')
+def execute_program():
+    try:
+        if os.path.exists(complete_directory) and os.path.isdir(complete_directory):
+            _read_db()                                                                       # Open and read the DB_File.
+            try:
+                output_route = _find_device_area()                                           # Save the path for the next use.
+                _new_directory(output_route)                                                 # Makes the directory with the name area using the key in the device name if this exist.    
+            except Exception as e:
+                print(f'Ocurrio un problema al crear el directorio. {e}')
 
-        os.chdir(output_route)                                                          # Change the working path.
-        insSysData.PrintInfo()                                                          # write the file with all device information.
+            os.chdir(output_route)                                                          # Change the working path.
+            insSysData.PrintInfo()                                                          # write the file with all device information.
+        else:
+            _new_directory(complete_directory)
+            try:
+                readme_file = os.path.join(complete_directory, "README.txt")
+                with open(readme_file, 'w') as file:
+                    file.write(HelpFile.write_txt_readme)
+            except Exception as e:
+                print(f'No se pudo generar el archivo de apoyo. {e}')
+    except Exception as e:
+        print(f'No se ha encontrado la ruta "\\DB_List", favor de crear el directorio. {e}')
 
-except Exception as e:
-    print(f'No se ha encontrado la ruta "\\DB_List", favor de crear el directorio. {e}')
-
-
-
+execute_program()
