@@ -7,6 +7,8 @@ import re
 
 from FileFunctions import ScriptManager
 
+manager = ScriptManager()
+
 class SystemInformationCatcher:
     def __init__(self):
         self.machine_id = self.MachineID()
@@ -111,10 +113,16 @@ class SystemInformationCatcher:
             if os.path.exists(id_search) and os.path.isfile(id_search):
                 with open(id_search, 'r') as file:
                     for items in file.readlines():
-                        print(items)
-                        if '.id=' in items:
-                            self.soft_anydesk = items.split('=')[1]
-                            break
+                        try:
+                            if '.id=' in items:
+                                self.soft_anydesk = items.split('=')[1]
+                                break
+                        except Exception as e:
+                            err_logs = ('Ocurrio un problema al buscar el ID de escritorio.\n'
+                                        f'{e}\n'
+                            )
+                            logs_directory = os.path.join(os.getcwd(), 'LOGS')
+                            manager.error_logs_print(logs_directory, err_logs)
             else:
                 output_message = 'AnyDesk no instalado.'
                 self.soft_anydesk = output_message
