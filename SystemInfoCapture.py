@@ -112,24 +112,21 @@ class SystemInformationCatcher:
             id_search = os.path.join(complete_directory, file_name)
             if os.path.exists(id_search) and os.path.isfile(id_search):
                 with open(id_search, 'r') as file:
-                    for items in file.readlines():
-                        try:
-                            if '.id=' in items:
-                                self.soft_anydesk = items.split('=')[1]
-                                break
-                        except Exception as e:
-                            err_logs = ('Ocurrio un problema al buscar el ID de escritorio.\n'
-                                        f'{e}\n'
-                            )
+                        for items in file.readlines():
+                                if '.id=' in items:
+                                    self.soft_anydesk = items.split('=')[1]
+                                    return self.soft_anydesk
+                        else:
                             logs_directory = os.path.join(os.getcwd(), 'LOGS')
+                            err_logs = (f'Error de busqueda: El ID de escritorio no se encuentra dentro de {file_name}.\n')
                             manager.error_logs_print(logs_directory, err_logs)
+                            return None
             else:
-                output_message = 'AnyDesk no instalado.'
-                self.soft_anydesk = output_message
-        
-        return self.soft_anydesk
+                return 'AnyDesk no instalado.'
+        else:
+            return 'Directorio principal no encontrado.'
     
-    # Save very data in his respective variable space and print it.
+    # Save every data in his respective variable space and print it.
     def PrintInfo(self):
         output = (
         f'Nombre del equipo: {self.machine_name}\n'
