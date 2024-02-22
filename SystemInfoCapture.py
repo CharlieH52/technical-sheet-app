@@ -3,30 +3,33 @@ import platform
 import psutil
 import socket
 import subprocess
+import re
+
+from FileFunctions import ScriptManager
 
 class SystemInformationCatcher:
     def __init__(self):
-        self.machine_id = self._MachineID()
+        self.machine_id = self.MachineID()
         self.machine_name = platform.node()                   
-        self.machine_ip = socket.gethostbyname(self.machine_name)
+        self.machine_ip = self.IpCatcher()
         self.machine_ram, _, _, _, _, = psutil.virtual_memory()
         self.machine_disk, _, _, _, = psutil.disk_usage('C:\\')
-        self.machine_mark = self._MoboManufInfo()
-        self.machine_mobo = self._MoboModelInfo()
-        self.machine_cpu = self._CpuNameInfo()
-        self.os_product = self._WinProduct()
-        self.os_arch = self._WinArch()
+        self.machine_mark = self.MoboManufInfo()
+        self.machine_mobo = self.MoboModelInfo()
+        self.machine_cpu = self.CpuNameInfo()
+        self.os_product = self.WinProduct()
+        self.os_arch = self.WinArch()
         self.user_acc_name = os.getlogin()
-        self.user_dom_name = self._HostNameInfo()
-        self.soft_anydesk = self._anydeskid()
+        self.user_dom_name = self.HostNameInfo()
+        self.soft_anydesk = self.anydeskid()
     
     # Bytes converter
-    def _BytesConverter(self, total_Bytes):
+    def BytesConverter(self, total_Bytes):
         return total_Bytes / (1024 ** 3)
 
     # Search for a domain addres, if the system has't a domain...
     # Execute the CMD code 'Systeminfo' then clean the output and gives the GroupName.
-    def _HostNameInfo(self):
+    def HostNameInfo(self):
         HostName = socket.gethostbyaddr(self.machine_name)[1]
         if HostName == []:
             CommandOut = subprocess.getoutput('systeminfo').split('\n')[1:-1]
@@ -39,58 +42,65 @@ class SystemInformationCatcher:
         
         return self.FOutput
     
-    # Search and consult a specific registry key for obtain Machine ID.
-    def _MachineID(self):
-        keyRute = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\SQMClient'
-        CommandOut = subprocess.getoutput(['reg', 'query', f'{keyRute}', '/v', 'MachineId']).split('\n')[1:-1]
-        SearchData = '-'
-        for linesID in CommandOut:
-            if SearchData in linesID:
-                self.machineid = linesID.split()
-                for SData in self.machineid:
-                    if SearchData in SData:
-                        self.machineid = SData.strip('{')
-                        self.machineid = self.machineid.strip('}')
+    # This function obtains the IP directión from the first Ethernet interface
+    def IpCatcher(self):
+        ip_format = re.compile(r'\b\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}\b')
+        Command_Args = ['netsh', 'interface', 'ipv4', 'show', 'ipaddresses', 'Ethernet']
+        self.machine_ip = subprocess.getoutput(Command_Args).split()
+        for items in self.machine_ip:
+            ip_match = ip_format.fullmatch(items)
+            if ip_match:
+                self.machine_ip = ip_match.group()
+                break
 
-        return self.machineid    
+        return self.machine_ip
+
+    # Search and consult a specific registry key for obtain Machine ID.
+    def MachineID(self):
+        Command_Args = ['wmic', 'nic', 'get', 'MACAddress']
+        output = subprocess.getoutput(Command_Args).split('\n')
+        cleaned_list = [index.strip() for index in output if index.strip()]
+        self.machine_id = cleaned_list[1]
+
+        return self.machine_id 
 
     # Use the input command and clean the output for post use
-    def _CommandExecution(self, command_line):
+    def CommandExecution(self, command_line):
         Command_Process = subprocess.getoutput(command_line).split('\n')
         self.result = Command_Process[2].strip()
         return self.result
 
-    def _MoboModelInfo(self):
+    def MoboModelInfo(self):
         Command_Args = ['wmic', 'baseboard', 'get', 'product']
-        self._CommandExecution(Command_Args)
+        self.CommandExecution(Command_Args)
         self.ProductModel = self.result
         return self.ProductModel
     
-    def _MoboManufInfo(self):
+    def MoboManufInfo(self):
         Command_Args = ['wmic', 'baseboard', 'get', 'manufacturer']
-        self._CommandExecution(Command_Args)
+        self.CommandExecution(Command_Args)
         self.MoboManufacturer = self.result
         return self.MoboManufacturer
 
-    def _CpuNameInfo(self):
+    def CpuNameInfo(self):
         Command_Args = ['wmic', 'cpu', 'get', 'name']
-        self._CommandExecution(Command_Args)
+        self.CommandExecution(Command_Args)
         self.cpu_name = self.result
         return self.cpu_name
     
-    def _WinProduct(self):
+    def WinProduct(self):
         Command_Args = ['wmic', 'os', 'get', 'caption']
-        self._CommandExecution(Command_Args)
+        self.CommandExecution(Command_Args)
         self.os_product = self.result
         return self.os_product
     
-    def _WinArch(self):
+    def WinArch(self):
         Command_Args = ['wmic', 'os', 'get', 'osarchitecture']
-        self._CommandExecution(Command_Args)
+        self.CommandExecution(Command_Args)
         self.os_arch = self.result
         return self.os_arch
     
-    def _anydeskid(self):
+    def anydeskid(self):
         folder_route = f'C:/Users/{self.user_acc_name}/AppData/Roaming/'
         folder_name = 'AnyDesk'
         complete_directory = os.path.join(folder_route, folder_name)
@@ -101,8 +111,10 @@ class SystemInformationCatcher:
             if os.path.exists(id_search) and os.path.isfile(id_search):
                 with open(id_search, 'r') as file:
                     for items in file.readlines():
+                        print(items)
                         if '.id=' in items:
                             self.soft_anydesk = items.split('=')[1]
+                            break
             else:
                 output_message = 'AnyDesk no instalado.'
                 self.soft_anydesk = output_message
@@ -115,12 +127,12 @@ class SystemInformationCatcher:
         f'Nombre del equipo: {self.machine_name}\n'
         f'Nombre de la cuenta: {self.user_acc_name}\n' 
         f'Nombre de usuario en el dominio: {self.user_dom_name}\n'
-        f'ID del dispositivo: {self.machine_id}\n'
+        f'Direccion MAC del dispositivo: {self.machine_id}\n'
         f'Marca del equipo: {self.machine_mark}\n'
         f'Procesador: {self.machine_cpu}\n'
-        f'Memoria RAM: {round(self._BytesConverter(self.machine_ram),0)} GB\n'
+        f'Memoria RAM: {round(self.BytesConverter(self.machine_ram),0)} GB\n'
         f'Motherboard: {self.machine_mobo}\n'
-        f'Almacenamiento: {round(self._BytesConverter(self.machine_disk),0)} GB\n'
+        f'Almacenamiento: {round(self.BytesConverter(self.machine_disk),0)} GB\n'
         f'Direccion IP: {self.machine_ip}\n'
         f'Sistema Operativo: {self.os_product} {self.os_arch}\n'
         f'AnyDesk ID: {self.soft_anydesk}\n'

@@ -22,6 +22,9 @@ def execute_program():
     db_file_name = 'DB_Dictionary.txt'
     readme_file_name = 'README.txt'
 
+    # Make the LOGS folder
+    manager.new_directory(logs_directory, logs_directory)
+    
     if os.path.exists(complete_directory) and os.path.isdir(complete_directory):
         dictionary = manager.read_db(complete_directory, db_file_name, logs_directory)
         output_route = os.path.join(script_directory, manager.find_device_area(dictionary, code_name))
@@ -29,9 +32,8 @@ def execute_program():
         os.chdir(output_route)
         device_name.PrintInfo()
     else:
-        manager.new_directory(complete_directory, logs_directory)
-        manager.default_dictionary(complete_directory, db_file_name)
         try:
+            manager.default_dictionary(complete_directory, db_file_name)
             readme_file = os.path.join(complete_directory, readme_file_name)
             with open(readme_file, 'w') as file:
                 file.write(help_file.write_txt_readme)
