@@ -4,6 +4,9 @@ from SystemInfoCapture import SystemInformationCatcher
 from FileFunctions import ScriptManager
 from Readme_Write import Readme
 
+# Linea de compilación:
+# COPY: pyinstaller --clean --windowed --onefile --distpath="D:\Documentos\Portfoil-Programacion\OUTPUT-FILES\GENERADOR-TECNICO" --name=Generar-Ficha-x64 Main.py
+
 # Main function
 def execute_program():
     device_name = SystemInformationCatcher()

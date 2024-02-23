@@ -13,11 +13,11 @@ class ScriptManager():
                     key, name = items.strip().split(': ')
                     dictionary[key] = name
         except FileNotFoundError as e:
-            err_log = (
+            make_log = (
                 f'Falta el directorio de datos DB_Dictionary.txt, se ha generado un README en la ruta {file_directory}.\n'
                 f'{e}\n'
             )
-            self.error_logs_print(logs_directory, err_log)
+            self.error_logs_print(logs_directory, make_log)
         return dictionary        
 
     # Takes the new route and makes the directory.
@@ -27,11 +27,11 @@ class ScriptManager():
             if (os.path.exists(directory) and os.path.isdir(directory)) == False:
                 os.mkdir(directory)
         except OSError as e:
-            err_log = (f'No se pudo crear el directorio {directory}:'
+            make_log = (f'No se pudo crear el directorio {directory}:'
                        f'{e}'
                        )
 
-            self.error_logs_print(logs_directory, err_log)
+            self.error_logs_print(logs_directory, make_log)
 
     def default_dictionary(self, db_directory, default_file_name):
             file_directory = os.path.join(db_directory, default_file_name)
@@ -52,13 +52,9 @@ class ScriptManager():
 
         return office_folder
 
-    def error_logs_print(self, logs_directory, error_log):
+    def error_logs_print(self, logs_directory, log):
         date = str(time.strftime('%d-%m-%Y_%H-%M-%S'))
         log_name = f'E_LOG - {date}.txt'
-        if (os.path.exists(logs_directory) and os.path.isdir(logs_directory)) == False:
-            self.new_directory(logs_directory, logs_directory)
-        else:
-            new_directory = os.path.join(logs_directory, log_name)
-        
-            with open(new_directory, 'w') as file:
-                file.write(error_log)
+        new_directory = os.path.join(logs_directory, log_name)       
+        with open(new_directory, 'w') as file:
+            file.write(log)

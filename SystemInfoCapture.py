@@ -11,6 +11,7 @@ manager = ScriptManager()
 
 class SystemInformationCatcher:
     def __init__(self):
+        self.machine_mac = self.MachineMAC()
         self.machine_id = self.MachineID()
         self.machine_name = platform.node()                   
         self.machine_ip = self.IpCatcher()
@@ -25,6 +26,12 @@ class SystemInformationCatcher:
         self.user_dom_name = self.HostNameInfo()
         self.soft_anydesk = self.anydeskid()
     
+    # Look for the 'LOGS' directory
+    def LogsDirectory(self):
+        folder_name = 'LOGS'
+        logs_directory = os.path.join(os.getcwd(), folder_name)
+        return logs_directory
+
     # Bytes converter
     def BytesConverter(self, total_Bytes):
         return total_Bytes / (1024 ** 3)
@@ -58,19 +65,34 @@ class SystemInformationCatcher:
         return self.machine_ip
 
     # Search and consult a specific registry key for obtain Machine ID.
-    def MachineID(self):
+    def MachineMAC(self):
         Command_Args = ['wmic', 'nic', 'get', 'MACAddress']
         output = subprocess.getoutput(Command_Args).split('\n')
         cleaned_list = [index.strip() for index in output if index.strip()]
-        self.machine_id = cleaned_list[1]
+        self.machine_mac = cleaned_list[1]
 
-        return self.machine_id 
+        return self.machine_mac 
 
     # Use the input command and clean the output for post use
     def CommandExecution(self, command_line):
         Command_Process = subprocess.getoutput(command_line).split('\n')
         self.result = Command_Process[2].strip()
         return self.result
+
+    def MachineID(self):
+        key_directory = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\SQMClient'
+        try:
+            CommandOut = subprocess.getoutput(['reg', 'query', f'{key_directory}', '/v', 'MachineId']).split('\n')[1:-1]
+        except Exception as e:
+            make_log = (
+                f'Ocurrio un error durante la busqueda del ID del dispositivo.\n'
+                f'{e}\n'   
+            )
+            manager.error_logs_print(self.LogsDirectory(), make_log)
+
+        searchData = re.search(r'{(.*?)}', CommandOut[1])
+        self.machine_id = searchData.group(1)
+        return self.machine_id
 
     def MoboModelInfo(self):
         Command_Args = ['wmic', 'baseboard', 'get', 'product']
@@ -114,12 +136,11 @@ class SystemInformationCatcher:
                 with open(id_search, 'r') as file:
                         for items in file.readlines():
                                 if '.id=' in items:
-                                    self.soft_anydesk = items.split('=')[1]
+                                    self.soft_anydesk = items.split('=')[1][:-1]
                                     return self.soft_anydesk
                         else:
-                            logs_directory = os.path.join(os.getcwd(), 'LOGS')
-                            err_logs = (f'Error de busqueda: El ID de escritorio no se encuentra dentro de {file_name}.\n')
-                            manager.error_logs_print(logs_directory, err_logs)
+                            make_log = (f'Error de busqueda: El ID de escritorio no se encuentra dentro de {file_name}.\n')
+                            manager.error_logs_print(self.LogsDirectory(), make_log)
                             return None
             else:
                 return 'AnyDesk no instalado.'
@@ -132,7 +153,7 @@ class SystemInformationCatcher:
         f'Nombre del equipo: {self.machine_name}\n'
         f'Nombre de la cuenta: {self.user_acc_name}\n' 
         f'Nombre de usuario en el dominio: {self.user_dom_name}\n'
-        f'Direccion MAC del dispositivo: {self.machine_id}\n'
+        f'ID del equipo: {self.machine_id}\n'
         f'Marca del equipo: {self.machine_mark}\n'
         f'Procesador: {self.machine_cpu}\n'
         f'Memoria RAM: {round(self.BytesConverter(self.machine_ram),0)} GB\n'
@@ -141,6 +162,7 @@ class SystemInformationCatcher:
         f'Direccion IP: {self.machine_ip}\n'
         f'Sistema Operativo: {self.os_product} {self.os_arch}\n'
         f'AnyDesk ID: {self.soft_anydesk}\n'
+        f'Direccion MAC del dispositivo: {self.machine_mac}\n'
         )
         
         with open(f'{self.machine_name}.txt','w') as file:
