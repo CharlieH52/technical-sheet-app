@@ -141,11 +141,11 @@ class SystemInformationCatcher:
                         else:
                             make_log = (f'Error de busqueda: El ID de escritorio no se encuentra dentro de {file_name}.\n')
                             manager.error_logs_print(self.LogsDirectory(), make_log)
-                            return None
+                            return 'ERROR: Revisar LOG...'
             else:
-                return 'AnyDesk no instalado.'
+                return 'Reinstalar AnyDesk.'
         else:
-            return 'Directorio principal no encontrado.'
+            return 'Instala AnyDesk.'
     
     # Save every data in his respective variable space and print it.
     def PrintInfo(self):
