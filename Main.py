@@ -4,9 +4,6 @@ from SystemInfoCapture import SystemInformationCatcher
 from FileFunctions import ScriptManager
 from Readme_Write import Readme
 
-# Linea de compilación:
-# COPY: pyinstaller --clean --onefile --distpath="D:\Documentos\Portfoil-Programacion\OUTPUT-FILES\GENERADOR-TECNICO" --name=Generar-Ficha-x64 Main.py
-
 # Main function
 def execute_program():
     device_name = SystemInformationCatcher()
@@ -44,4 +41,5 @@ def execute_program():
             err_log = f'No se pudo generar el archivo de apoyo. {e}'
             manager.error_logs_print(logs_directory, err_log)
 
-execute_program()
+if __name__ == '__main__':
+    execute_program()

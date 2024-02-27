@@ -150,19 +150,19 @@ class SystemInformationCatcher:
     # Save every data in his respective variable space and print it.
     def PrintInfo(self):
         output = (
-        f'Nombre del equipo: {self.machine_name}\n'
-        f'Nombre de la cuenta: {self.user_acc_name}\n' 
-        f'Nombre de usuario en el dominio: {self.user_dom_name}\n'
-        f'ID del equipo: {self.machine_id}\n'
-        f'Marca del equipo: {self.machine_mark}\n'
-        f'Procesador: {self.machine_cpu}\n'
-        f'Memoria RAM: {round(self.BytesConverter(self.machine_ram),0)} GB\n'
-        f'Motherboard: {self.machine_mobo}\n'
-        f'Almacenamiento: {round(self.BytesConverter(self.machine_disk),0)} GB\n'
-        f'Direccion IP: {self.machine_ip}\n'
-        f'Sistema Operativo: {self.os_product} {self.os_arch}\n'
-        f'AnyDesk ID: {self.soft_anydesk}\n'
-        f'Direccion MAC del dispositivo: {self.machine_mac}\n'
+            f'Nombre del equipo: {self.machine_name}\n'
+            f'Nombre de la cuenta: {self.user_acc_name}\n' 
+            f'Nombre de usuario en el dominio: {self.user_dom_name}\n'
+            f'ID del equipo: {self.machine_id}\n'
+            f'Marca del equipo: {self.machine_mark}\n'
+            f'Procesador: {self.machine_cpu}\n'
+            f'Memoria RAM: {round(self.BytesConverter(self.machine_ram),0)} GB\n'
+            f'Motherboard: {self.machine_mobo}\n'
+            f'Almacenamiento: {round(self.BytesConverter(self.machine_disk),0)} GB\n'
+            f'Direccion IP: {self.machine_ip}\n'
+            f'Sistema Operativo: {self.os_product} {self.os_arch}\n'
+            f'AnyDesk ID: {self.soft_anydesk}\n'
+            f'Direccion MAC del dispositivo: {self.machine_mac}'
         )
         
         with open(f'{self.machine_name}.txt','w') as file:
