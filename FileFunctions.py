@@ -15,7 +15,7 @@ class ScriptManager():
         except FileNotFoundError as e:
             make_log = (
                 f'Falta el directorio de datos DB_Dictionary.txt, se ha generado un README en la ruta {file_directory}.\n'
-                f'{e}\n'
+                f'{e}'
             )
             self.error_logs_print(logs_directory, make_log)
         return dictionary        
@@ -37,7 +37,7 @@ class ScriptManager():
             file_directory = os.path.join(db_directory, default_file_name)
             with open(file_directory, 'w') as file:
                 file.write('Crea tu diccionario en este archivo.\n'
-                        'NO OLVIDES BORRAR ESTAS DOS LINEAS\n'
+                        'NO OLVIDES BORRAR ESTAS DOS LINEAS'
                         )
 
     # Read the device name and compare it with the dictionary to organize the outputs.
