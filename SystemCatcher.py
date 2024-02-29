@@ -8,7 +8,6 @@ import re
 class SystemInformationCatcher:
     def __init__(self, logs_manager):
         self.logs_man = logs_manager
-        
         self.machine_mac = self.MachineMAC()
         self.machine_id = self.MachineID()
         self.machine_name = platform.node()                   
@@ -135,7 +134,7 @@ class SystemInformationCatcher:
                         else:
                             make_log = (
                                 f'El ID de escritorio no se encuentra dentro de {file_name}.\n'
-                                f'Desinstala y reinstala Anydesk para reparar este error.'
+                                f'Desinstala y reinstala Anydesk para solucionar este error.'
                                 )
                             self.logs_man.error_logs_print(self.logs_man.op_log_directory, make_log)
                             return 'Revisa el ERROR_LOG...'
