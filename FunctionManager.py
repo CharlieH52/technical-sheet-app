@@ -11,7 +11,11 @@ class FileManager:
         # Atributos
         self.machine_name = platform.node()
         self.db_folder_name = 'DB_List'
+        
+        # Rutas
         self.db_path = os.path.join(os.getcwd(), self.db_folder_name)
+
+        # Archivos
         self.db_file_name = 'DB_Dictionary.txt'
         
         # Diccionario
@@ -64,6 +68,11 @@ class FileManager:
 class FolderManager:
     def __init__(self, logs_manager):
         self.logs_man = logs_manager
+        self.out_folder_name = 'FICHAS'
+        self.out_path = os.path.join(os.getcwd(), self.out_folder_name)
+        
+    def output_path(self):
+        self.new_directory(self.out_path)
 
     # Se encarga de crear nuevos directorios a partir de una dirección de entrada.
     def new_directory(self, new_directory_name):
