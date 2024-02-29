@@ -24,18 +24,17 @@ class SystemInformationCatcher:
         self.user_dom_name = self.HostNameInfo()
         self.soft_anydesk = self.anydeskid()
 
-    # Use the input command and clean the output for post use
+    # Ejecuta y limpia los comandos.
     def CommandExecution(self, command_line):
         Command_Process = subprocess.getoutput(command_line).split('\n')
         self.result = Command_Process[2].strip()
         return self.result
 
-    # Bytes converter
+    # Convierte bits a bytes.
     def BytesConverter(self, total_Bytes):
         return total_Bytes / (1024 ** 3)
 
-    # Search for a domain addres, if the system has't a domain...
-    # Execute the CMD code 'Systeminfo' then clean the output and gives the GroupName.
+    # Comprueba el registro a un dominio, en caso de no haber uno, coloca el grupo al que esta registrado.
     def HostNameInfo(self):
         HostName = socket.gethostbyaddr(self.machine_name)[1]
         if HostName == []:
@@ -49,7 +48,7 @@ class SystemInformationCatcher:
         
         return self.FOutput
     
-    # This function obtains the IP directión from the first Ethernet interface
+    # Obtiene la direccion IP del adaptador Ethernet principal.
     def IpCatcher(self):
         ip_format = re.compile(r'\b\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}\b')
         Command_Args = ['netsh', 'interface', 'ipv4', 'show', 'ipaddresses', 'Ethernet']
@@ -62,7 +61,7 @@ class SystemInformationCatcher:
 
         return self.machine_ip
 
-    # Search and consult a specific registry key for obtain Machine ID.
+    # Obtiene la direccion MAC del equipo.
     def MachineMAC(self):
         Command_Args = ['wmic', 'nic', 'get', 'MACAddress']
         output = subprocess.getoutput(Command_Args).split('\n')
@@ -71,6 +70,7 @@ class SystemInformationCatcher:
 
         return self.machine_mac 
 
+    # Obtiene el ID de Windows que identifica el equipo, este cambia en cada formateo del equipo.
     def MachineID(self):
         key_directory = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\SQMClient'
         try:
@@ -122,6 +122,8 @@ class SystemInformationCatcher:
         complete_directory = os.path.join(folder_route, folder_name)
         file_name = 'system.conf'
         
+        # IF#1 Comprueba la existencia del directorio principal de Anydesk.
+        # IF#2 Comprueba la existencia del archivo que deberia contener el ID de estacion.
         if os.path.exists(complete_directory) and os.path.isdir(complete_directory):
             id_search = os.path.join(complete_directory, file_name)
             if os.path.exists(id_search) and os.path.isfile(id_search):
@@ -131,15 +133,18 @@ class SystemInformationCatcher:
                                     self.soft_anydesk = items.split('=')[1][:-1]
                                     return self.soft_anydesk
                         else:
-                            make_log = (f'Error de busqueda: El ID de escritorio no se encuentra dentro de {file_name}.')
+                            make_log = (
+                                f'El ID de escritorio no se encuentra dentro de {file_name}.\n'
+                                f'Desinstala y reinstala Anydesk para reparar este error.'
+                                )
                             self.logs_man.error_logs_print(self.logs_man.op_log_directory, make_log)
-                            return 'ERROR: Revisar LOG...'
+                            return 'Revisa el ERROR_LOG...'
             else:
                 return 'Reinstalar AnyDesk.'
         else:
             return 'Instala AnyDesk.'
     
-    # Save every data in his respective variable space and print it.
+    # Genera una formato de salida con la informacion obtenida en los atributos de la clase.
     def PrintInfo(self):
         output = (
             f'Nombre del equipo: {self.machine_name}\n'

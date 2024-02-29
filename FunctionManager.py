@@ -37,10 +37,17 @@ class FileManager:
     # Crea un diccionario por defecto para su llenado.
     def default_dictionary(self, db_directory, default_file_name):
             file_directory = os.path.join(db_directory, default_file_name)
-            with open(file_directory, 'w') as file:
-                file.write('Crea tu diccionario en este archivo.\n'
-                        'NO OLVIDES BORRAR ESTAS DOS LINEAS'
-                        )
+            try:
+                with open(file_directory, 'w') as file:
+                    file.write('Crea tu diccionario en este archivo.\n'
+                            'NO OLVIDES BORRAR ESTAS DOS LINEAS'
+                            )
+            except OSError as e:
+                make_log = (
+                    f'No se pudo generar el archivo de apoyo.\n'
+                    f'{e}'                            
+                )
+                self.logs_man.error_logs_print(self.logs_man.op_log_directory, make_log)
 
     # Read the device name and compare it with the dictionary to organize the outputs.
     def find_device_area(self, dictionary, code_name):

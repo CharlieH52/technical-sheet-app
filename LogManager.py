@@ -14,7 +14,7 @@ class LogManagerSystem:
 
     def error_logs_print(self, directory, log):
         date = str(time.strftime('%d-%m-%Y_%H-%M-%S'))
-        log_name = f'E_LOG-{node}-{date}.log'
+        log_name = f'ERROR_LOG-{node}-{date}.log'
         new_directory = os.path.join(directory, log_name)       
         with open(new_directory, 'w') as file:
             file.write(log)

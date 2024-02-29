@@ -25,11 +25,7 @@ def execute_program():
         os.chdir(output_route)
         device_name.PrintInfo()
     else:
-        try:
-            file_man.default_dictionary(file_man.db_path, file_man.db_file_name)
-        except Exception as e:
-            make_log = f'No se pudo generar el archivo de apoyo. {e}'
-            logs_man.error_logs_print(logs_man.op_log_directory, make_log)
+        file_man.default_dictionary(file_man.db_path, file_man.db_file_name)
 
 if __name__ == '__main__':
     execute_program()
