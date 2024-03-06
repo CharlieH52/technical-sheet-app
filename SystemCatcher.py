@@ -10,10 +10,11 @@ class SystemInformationCatcher:
         self.logs_man = logs_manager
         
         self.machine_mac = self.machine_mac_add()
-        self.machine_id = self.machine_id_num()
+        #self.machine_id = self.machine_id_num()
         self.machine_name = platform.node()                   
         self.machine_ip = self.ip_address_catcher()
         self.machine_disk, _, _, _, = psutil.disk_usage('C:\\')
+        self.machine_memory, _, _, _, _, = psutil.virtual_memory()
         self.machine_disk_model = self.disk_model()
         self.machine_mark = self.mobo_manuf_info()
         self.machine_mobo = self.mobo_model_info()
@@ -24,11 +25,6 @@ class SystemInformationCatcher:
         self.user_dom_name = self.domain_checker()
         self.soft_anydesk = self.anydesk_id_checker()
 
-        # Atributos relacionados a la RAM
-        # Listado que contiene informacion dentro de diccionarios (Solo Consulta)
-        self.memory_ram_info = self.memory_ram_check()
-        self.memory_total_cap = self.memory_procces_info(0)
-
     def command_execute(self, command_line, option):
         command_process = subprocess.getoutput(command_line).split('\n')
         if option == 0:
@@ -38,41 +34,7 @@ class SystemInformationCatcher:
         # Para salidas normales cortas
         if option == 1:
             output = [item.strip() for item in command_process if item.strip()]
-            return output[1]
-
-        # Genera un diccionario con la informacion sobre la RAM, no utilzar para otros procesos.
-        if option == 2:
-            ram_dict = {}
-            output = [items.strip() for items in command_process if items.strip()]
-            for item in output:
-                if 'No' not in item:
-                    key, value = item.split('=')
-                    ram_dict[key] = value
-            return ram_dict
-        
-    # Genera una lista con un maximo de 4 iteraciones para obtener la informacion de hasta 4 DIMM de RAM en el sistema.
-    def memory_ram_check(self):
-        ram_list = []
-        dimm = 1
-        while dimm < 5:
-            command_args = ['wmic', 'memorychip', 'where', f'InterleavePosition={dimm}', 'get', 'Capacity,', 'Speed,', 'Manufacturer,', 'PartNumber,', 'DeviceLocator', '/value']
-            dimm_info = self.command_execute(command_args, 2)
-            ram_list.append(dimm_info)
-            dimm += 1
-        return ram_list
-    
-    #
-    def memory_procces_info(self, option):
-        # Memoria total en sistema.
-        if option == 0:
-            dimm_it = 0
-            t_memory = 0
-            print(self.memory_ram_info[dimm_it]['Capacity'])
-            while dimm_it < 4:
-                current_capacity = self.memory_ram_info[dimm_it]['Capacity']
-                t_memory += current_capacity
-                dimm_it += 1
-            return round(self.BytesConverter(t_memory), 0)
+            return output[1]    
 
     # Convierte bits a bytes.
     def BytesConverter(self, total_Bytes):
@@ -198,16 +160,16 @@ class SystemInformationCatcher:
             f'Nombre del equipo: {self.machine_name}\n'
             f'Nombre de la cuenta: {self.user_acc_name}\n' 
             f'Nombre de usuario en el dominio: {self.user_dom_name}\n'
-            f'ID del equipo: {self.machine_id}\n'
             f'Direccion MAC: {self.machine_mac}\n'
             f'Marca del equipo: {self.machine_mark}\n'
             f'Procesador: {self.machine_cpu}\n'
-            f'Memoria RAM: {self.memory_total_cap} GB\n'
+            f'Memoria RAM: {round(self.BytesConverter(self.machine_memory),0)} GB\n'
             f'Motherboard: {self.machine_mobo}\n'
             f'Almacenamiento: {round(self.BytesConverter(self.machine_disk),0)} GB {self.machine_disk_model}\n'
             f'Direccion IP: {self.machine_ip}\n'
             f'Sistema Operativo: {self.os_product} {self.os_arch}\n'
             f'AnyDesk ID: {self.soft_anydesk}'
+            #f'ID del equipo: {self.machine_id}\n'
         )
         
         with open(f'{self.machine_name}.txt','w') as file:

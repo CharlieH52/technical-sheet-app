@@ -19,10 +19,10 @@ class FileManager:
         self.db_file_name = 'DB_Dictionary.txt'
         
         # Diccionario
-        self.dictionary = self.read_db()
+        self.dictionary = self.database_reader()
 
     # Esta función lee el diccionario de áreas y crea uno en caso de no haberlo.
-    def read_db(self):
+    def database_reader(self):
         dictionary = {}
         file_path = os.path.join(self.db_path, self.db_file_name)
         try:
