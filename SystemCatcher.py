@@ -8,33 +8,78 @@ import re
 class SystemInformationCatcher:
     def __init__(self, logs_manager):
         self.logs_man = logs_manager
-        self.machine_mac = self.MachineMAC()
-        self.machine_id = self.MachineID()
+        
+        self.machine_mac = self.machine_mac_add()
+        self.machine_id = self.machine_id_num()
         self.machine_name = platform.node()                   
-        self.machine_ip = self.IpCatcher()
-        self.machine_ram, _, _, _, _, = psutil.virtual_memory()
+        self.machine_ip = self.ip_address_catcher()
         self.machine_disk, _, _, _, = psutil.disk_usage('C:\\')
-        self.machine_mark = self.MoboManufInfo()
-        self.machine_mobo = self.MoboModelInfo()
-        self.machine_cpu = self.CpuNameInfo()
-        self.os_product = self.WinProduct()
-        self.os_arch = self.WinArch()
+        self.machine_disk_model = self.disk_model()
+        self.machine_mark = self.mobo_manuf_info()
+        self.machine_mobo = self.mobo_model_info()
+        self.machine_cpu = self.cpu_name_info()
+        self.os_product = self.win_product()
+        self.os_arch = self.win_architecture()
         self.user_acc_name = os.getlogin()
-        self.user_dom_name = self.HostNameInfo()
-        self.soft_anydesk = self.anydeskid()
+        self.user_dom_name = self.domain_checker()
+        self.soft_anydesk = self.anydesk_id_checker()
 
-    # Ejecuta y limpia los comandos.
-    def CommandExecution(self, command_line):
-        Command_Process = subprocess.getoutput(command_line).split('\n')
-        self.result = Command_Process[2].strip()
-        return self.result
+        # Atributos relacionados a la RAM
+        # Listado que contiene informacion dentro de diccionarios (Solo Consulta)
+        self.memory_ram_info = self.memory_ram_check()
+        self.memory_total_cap = self.memory_procces_info(0)
+
+    def command_execute(self, command_line, option):
+        command_process = subprocess.getoutput(command_line).split('\n')
+        if option == 0:
+            output = command_process
+            return output
+
+        # Para salidas normales cortas
+        if option == 1:
+            output = [item.strip() for item in command_process if item.strip()]
+            return output[1]
+
+        # Genera un diccionario con la informacion sobre la RAM, no utilzar para otros procesos.
+        if option == 2:
+            ram_dict = {}
+            output = [items.strip() for items in command_process if items.strip()]
+            for item in output:
+                if 'No' not in item:
+                    key, value = item.split('=')
+                    ram_dict[key] = value
+            return ram_dict
+        
+    # Genera una lista con un maximo de 4 iteraciones para obtener la informacion de hasta 4 DIMM de RAM en el sistema.
+    def memory_ram_check(self):
+        ram_list = []
+        dimm = 1
+        while dimm < 5:
+            command_args = ['wmic', 'memorychip', 'where', f'InterleavePosition={dimm}', 'get', 'Capacity,', 'Speed,', 'Manufacturer,', 'PartNumber,', 'DeviceLocator', '/value']
+            dimm_info = self.command_execute(command_args, 2)
+            ram_list.append(dimm_info)
+            dimm += 1
+        return ram_list
+    
+    #
+    def memory_procces_info(self, option):
+        # Memoria total en sistema.
+        if option == 0:
+            dimm_it = 0
+            t_memory = 0
+            print(self.memory_ram_info[dimm_it]['Capacity'])
+            while dimm_it < 4:
+                current_capacity = self.memory_ram_info[dimm_it]['Capacity']
+                t_memory += current_capacity
+                dimm_it += 1
+            return round(self.BytesConverter(t_memory), 0)
 
     # Convierte bits a bytes.
     def BytesConverter(self, total_Bytes):
         return total_Bytes / (1024 ** 3)
 
     # Comprueba el registro a un dominio, en caso de no haber uno, coloca el grupo al que esta registrado.
-    def HostNameInfo(self):
+    def domain_checker(self):
         HostName = socket.gethostbyaddr(self.machine_name)[1]
         if HostName == []:
             CommandOut = subprocess.getoutput('systeminfo').split('\n')[1:-1]
@@ -48,7 +93,7 @@ class SystemInformationCatcher:
         return self.FOutput
     
     # Obtiene la direccion IP del adaptador Ethernet principal.
-    def IpCatcher(self):
+    def ip_address_catcher(self):
         ip_format = re.compile(r'\b\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}\b')
         Command_Args = ['netsh', 'interface', 'ipv4', 'show', 'ipaddresses', 'Ethernet']
         self.machine_ip = subprocess.getoutput(Command_Args).split()
@@ -61,16 +106,13 @@ class SystemInformationCatcher:
         return self.machine_ip
 
     # Obtiene la direccion MAC del equipo.
-    def MachineMAC(self):
+    def machine_mac_add(self):
         Command_Args = ['wmic', 'nic', 'get', 'MACAddress']
-        output = subprocess.getoutput(Command_Args).split('\n')
-        cleaned_list = [index.strip() for index in output if index.strip()]
-        self.machine_mac = cleaned_list[1]
-
-        return self.machine_mac 
+        output = self.command_execute(Command_Args, 1)
+        return output
 
     # Obtiene el ID de Windows que identifica el equipo, este cambia en cada formateo del equipo.
-    def MachineID(self):
+    def machine_id_num(self):
         key_directory = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\SQMClient'
         try:
             CommandOut = subprocess.getoutput(['reg', 'query', f'{key_directory}', '/v', 'MachineId']).split('\n')[1:-1]
@@ -85,37 +127,44 @@ class SystemInformationCatcher:
         self.machine_id = searchData.group(1)
         return self.machine_id
 
-    def MoboModelInfo(self):
+    # Obtiene el modelo del Motherboard    
+    def mobo_model_info(self):
         Command_Args = ['wmic', 'baseboard', 'get', 'product']
-        self.CommandExecution(Command_Args)
-        self.ProductModel = self.result
-        return self.ProductModel
+        output = self.command_execute(Command_Args, 1)
+        return output
     
-    def MoboManufInfo(self):
+    # Obtiene el nombre del fabricante del Motherboard.
+    def mobo_manuf_info(self):
         Command_Args = ['wmic', 'baseboard', 'get', 'manufacturer']
-        self.CommandExecution(Command_Args)
-        self.MoboManufacturer = self.result
-        return self.MoboManufacturer
+        output = self.command_execute(Command_Args, 1)
+        return output
+    
+    # Obtiene el modelo de la unidad de almacenamiento principal.
+    def disk_model(self):
+        command_args = ['wmic', 'diskdrive', 'where', 'index = 0', 'get', 'model', '/all']
+        output = self.command_execute(command_args, 1)
+        return output
 
-    def CpuNameInfo(self):
+    # Obtiene el nombre completo y datos principales del CPU.
+    def cpu_name_info(self):
         Command_Args = ['wmic', 'cpu', 'get', 'name']
-        self.CommandExecution(Command_Args)
-        self.cpu_name = self.result
-        return self.cpu_name
+        output = self.command_execute(Command_Args, 1)
+        return output
     
-    def WinProduct(self):
+    # Obtiene la version del producto Windows instalado en el sistema.
+    def win_product(self):
         Command_Args = ['wmic', 'os', 'get', 'caption']
-        self.CommandExecution(Command_Args)
-        self.os_product = self.result
-        return self.os_product
+        output = self.command_execute(Command_Args, 1)
+        return output
     
-    def WinArch(self):
+    # Obtiene la arquitectura del SO instalado.
+    def win_architecture(self):
         Command_Args = ['wmic', 'os', 'get', 'osarchitecture']
-        self.CommandExecution(Command_Args)
-        self.os_arch = self.result
-        return self.os_arch
-    
-    def anydeskid(self):
+        output = self.command_execute(Command_Args, 1)
+        return output
+
+    # Obtiene el ID de escritorio de AnyDesk.
+    def anydesk_id_checker(self):
         folder_route = f'C:/Users/{self.user_acc_name}/AppData/Roaming/'
         folder_name = 'AnyDesk'
         complete_directory = os.path.join(folder_route, folder_name)
@@ -123,9 +172,9 @@ class SystemInformationCatcher:
         
         # IF#1 Comprueba la existencia del directorio principal de Anydesk.
         # IF#2 Comprueba la existencia del archivo que deberia contener el ID de estacion.
-        if os.path.exists(complete_directory) and os.path.isdir(complete_directory):
+        if os.path.isdir(complete_directory) == True:
             id_search = os.path.join(complete_directory, file_name)
-            if os.path.exists(id_search) and os.path.isfile(id_search):
+            if os.path.isfile(id_search) == True:
                 with open(id_search, 'r') as file:
                         for items in file.readlines():
                                 if '.id=' in items:
@@ -149,12 +198,13 @@ class SystemInformationCatcher:
             f'Nombre del equipo: {self.machine_name}\n'
             f'Nombre de la cuenta: {self.user_acc_name}\n' 
             f'Nombre de usuario en el dominio: {self.user_dom_name}\n'
-            f'ID del equipo: {self.machine_id} || MAC: {self.machine_mac}\n'
+            f'ID del equipo: {self.machine_id}\n'
+            f'Direccion MAC: {self.machine_mac}\n'
             f'Marca del equipo: {self.machine_mark}\n'
             f'Procesador: {self.machine_cpu}\n'
-            f'Memoria RAM: {round(self.BytesConverter(self.machine_ram),0)} GB\n'
+            f'Memoria RAM: {self.memory_total_cap} GB\n'
             f'Motherboard: {self.machine_mobo}\n'
-            f'Almacenamiento: {round(self.BytesConverter(self.machine_disk),0)} GB\n'
+            f'Almacenamiento: {round(self.BytesConverter(self.machine_disk),0)} GB {self.machine_disk_model}\n'
             f'Direccion IP: {self.machine_ip}\n'
             f'Sistema Operativo: {self.os_product} {self.os_arch}\n'
             f'AnyDesk ID: {self.soft_anydesk}'

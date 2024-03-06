@@ -38,6 +38,9 @@ class FileManager:
             self.logs_man.error_logs_print(self.logs_man.op_log_directory, make_log)
         return dictionary        
 
+    def is_valid_directory(self, main_path):
+        return os.path.isdir(main_path)
+    
     # Crea un diccionario por defecto para su llenado.
     def default_dictionary(self, db_directory, default_file_name):
             file_directory = os.path.join(db_directory, default_file_name)
@@ -78,7 +81,7 @@ class FolderManager:
     def new_directory(self, new_directory_name):
         try:
             directory = os.path.join(new_directory_name)
-            if (os.path.exists(directory) and os.path.isdir(directory)) == False:
+            if os.path.isdir(directory) == False:
                 os.mkdir(directory)
         except OSError as e:
             make_log = (f'No se pudo crear el directorio {directory}:'

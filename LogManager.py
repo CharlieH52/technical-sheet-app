@@ -3,8 +3,9 @@ import os
 import platform
 
 class LogManagerSystem:
+    folder_name = 'LOGS'
+    
     def __init__(self):
-        self.folder_name = 'LOGS'
         self.machine_name = platform.node()
         self.op_log_directory = self.output_route()
         
