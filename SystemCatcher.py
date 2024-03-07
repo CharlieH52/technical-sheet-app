@@ -157,19 +157,18 @@ class SystemInformationCatcher:
     # Genera una formato de salida con la informacion obtenida en los atributos de la clase.
     def PrintInfo(self):
         output = (
-            f'Nombre del equipo: {self.machine_name}\n'
-            f'Nombre de la cuenta: {self.user_acc_name}\n' 
-            f'Nombre de usuario en el dominio: {self.user_dom_name}\n'
-            f'Direccion MAC: {self.machine_mac}\n'
-            f'Marca del equipo: {self.machine_mark}\n'
-            f'Procesador: {self.machine_cpu}\n'
-            f'Memoria RAM: {round(self.BytesConverter(self.machine_memory),0)} GB\n'
-            f'Motherboard: {self.machine_mobo}\n'
-            f'Almacenamiento: {round(self.BytesConverter(self.machine_disk),0)} GB {self.machine_disk_model}\n'
-            f'Direccion IP: {self.machine_ip}\n'
-            f'Sistema Operativo: {self.os_product} {self.os_arch}\n'
-            f'AnyDesk ID: {self.soft_anydesk}'
-            #f'ID del equipo: {self.machine_id}\n'
+            f'OfficeName: {self.machine_name}\n'
+            f'DeviceName: {self.user_acc_name}\n' 
+            f'AccountName: {self.user_dom_name}\n'
+            f'UserDomain: {self.machine_mac}\n'
+            f'MACAdd: {self.machine_mark}\n'
+            f'CPU: {self.machine_cpu}\n'
+            f'MemRAM: {round(self.BytesConverter(self.machine_memory),0)} GB\n'
+            f'MOBO: {self.machine_mobo}\n'
+            f'Storage: {round(self.BytesConverter(self.machine_disk),0)} GB {self.machine_disk_model}\n'
+            f'IPAdd: {self.machine_ip}\n'
+            f'OSName: {self.os_product} {self.os_arch}\n'
+            f'AnyDeskID: {self.soft_anydesk}'
         )
         
         with open(f'{self.machine_name}.txt','w') as file:
