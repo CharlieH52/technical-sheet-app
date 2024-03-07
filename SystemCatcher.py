@@ -4,10 +4,11 @@ import psutil
 import socket
 import subprocess
 import re
-
+from FunctionManager import FileManager
 class SystemInformationCatcher:
     def __init__(self, logs_manager):
         self.logs_man = logs_manager
+        self.file_manager = FileManager(logs_manager)
         
         self.machine_mac = self.machine_mac_add()
         #self.machine_id = self.machine_id_num()
@@ -153,15 +154,16 @@ class SystemInformationCatcher:
                 return 'Reinstalar AnyDesk.'
         else:
             return 'Instala AnyDesk.'
-    
+
     # Genera una formato de salida con la informacion obtenida en los atributos de la clase.
     def PrintInfo(self):
         output = (
-            f'OfficeName: {self.machine_name}\n'
-            f'DeviceName: {self.user_acc_name}\n' 
-            f'AccountName: {self.user_dom_name}\n'
-            f'UserDomain: {self.machine_mac}\n'
-            f'MACAdd: {self.machine_mark}\n'
+            f'OfficeName: {self.file_manager.find_device_area(self.file_manager.database_reader(), self.machine_name)}\n'
+            f'DeviceName: {self.machine_name}\n'
+            f'AccountName: {self.user_acc_name}\n' 
+            f'UserDomain: {self.user_dom_name}\n'
+            f'MACAdd: {self.machine_mac}\n'
+            f'Manufacturer: {self.machine_mark}\n'
             f'CPU: {self.machine_cpu}\n'
             f'MemRAM: {round(self.BytesConverter(self.machine_memory),0)} GB\n'
             f'MOBO: {self.machine_mobo}\n'
