@@ -1,12 +1,12 @@
 import time
 import os
-import platform
+from platform import node
 
 class LogManagerSystem:
     folder_name = 'LOGS'
     
     def __init__(self):
-        self.machine_name = platform.node()
+        self.machine_name = node()
         self.op_log_directory = self.output_route()
         
     def output_route(self):

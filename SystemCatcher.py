@@ -5,13 +5,14 @@ import socket
 import subprocess
 import re
 from FunctionManager import FileManager
+
 class SystemInformationCatcher:
     def __init__(self, logs_manager):
         self.logs_man = logs_manager
         self.file_manager = FileManager(logs_manager)
         
         self.machine_mac = self.machine_mac_add()
-        #self.machine_id = self.machine_id_num()
+        self.machine_id = self.machine_id_num()
         self.machine_name = platform.node()                   
         self.machine_ip = self.ip_address_catcher()
         self.machine_disk, _, _, _, = psutil.disk_usage('C:\\')
