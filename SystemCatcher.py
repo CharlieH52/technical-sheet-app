@@ -1,9 +1,10 @@
 import os
-import platform
-import psutil
 import socket
 import subprocess
 import re
+
+from psutil import disk_usage, virtual_memory
+from platform import node
 from FunctionManager import FileManager
 
 class SystemInformationCatcher:
@@ -11,32 +12,36 @@ class SystemInformationCatcher:
         self.logs_man = logs_manager
         self.file_manager = FileManager(logs_manager)
         
+        # Datos del hardware y configuracion
         self.machine_mac = self.machine_mac_add()
         self.machine_id = self.machine_id_num()
-        self.machine_name = platform.node()                   
+        self.machine_name = node()                   
         self.machine_ip = self.ip_address_catcher()
-        self.machine_disk, _, _, _, = psutil.disk_usage('C:\\')
-        self.machine_memory, _, _, _, _, = psutil.virtual_memory()
+        self.machine_disk, _, _, _, = disk_usage('C:\\')
+        self.machine_memory, _, _, _, _, = virtual_memory()
         self.machine_disk_model = self.disk_model()
         self.machine_mark = self.mobo_manuf_info()
         self.machine_mobo = self.mobo_model_info()
         self.machine_cpu = self.cpu_name_info()
+
+        # Informacion de windows
         self.os_product = self.win_product()
         self.os_arch = self.win_architecture()
+
+        # Informacion del usuario
         self.user_acc_name = os.getlogin()
         self.user_dom_name = self.domain_checker()
+
+        # Atributos independientes
         self.soft_anydesk = self.anydesk_id_checker()
 
-    def command_execute(self, command_line, option):
-        command_process = subprocess.getoutput(command_line).split('\n')
-        if option == 0:
-            output = command_process
-            return output
-
-        # Para salidas normales cortas
-        if option == 1:
-            output = [item.strip() for item in command_process if item.strip()]
-            return output[1]    
+    def command_execute(self, command_line):
+        return subprocess.getoutput(command_line).split('\n')
+        
+    # Para salidas normales cortas
+    def clean_output(self, input):
+        output = [item.strip() for item in input if item.strip()]
+        return output[1]    
 
     # Convierte bits a bytes.
     def BytesConverter(self, total_Bytes):
@@ -71,61 +76,53 @@ class SystemInformationCatcher:
 
     # Obtiene la direccion MAC del equipo.
     def machine_mac_add(self):
-        Command_Args = ['wmic', 'nic', 'get', 'MACAddress']
-        output = self.command_execute(Command_Args, 1)
-        return output
+        command_args = ['wmic', 'nic', 'where', 'deviceid=1', 'get', 'MACAddress']
+        return self.clean_output(self.command_execute(command_args))
 
     # Obtiene el ID de Windows que identifica el equipo, este cambia en cada formateo del equipo.
     def machine_id_num(self):
         key_directory = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\SQMClient'
         try:
             CommandOut = subprocess.getoutput(['reg', 'query', f'{key_directory}', '/v', 'MachineId']).split('\n')[1:-1]
+            searchData = (re.search(r'{(.*?)}', CommandOut[1])).group(1)
+            return searchData
         except Exception as e:
             make_log = (
                 f'Ocurrio un error durante la busqueda del ID del dispositivo.\n'
                 f'{e}\n'   
             )
             self.logs_man.error_logs_print(self.logs_man.op_log_directory, make_log)
-
-        searchData = re.search(r'{(.*?)}', CommandOut[1])
-        self.machine_id = searchData.group(1)
-        return self.machine_id
+            return 'ID no localizada.'
 
     # Obtiene el modelo del Motherboard    
     def mobo_model_info(self):
-        Command_Args = ['wmic', 'baseboard', 'get', 'product']
-        output = self.command_execute(Command_Args, 1)
-        return output
+        command_args = ['wmic', 'baseboard', 'get', 'product']
+        return self.clean_output(self.command_execute(command_args))
     
     # Obtiene el nombre del fabricante del Motherboard.
     def mobo_manuf_info(self):
-        Command_Args = ['wmic', 'baseboard', 'get', 'manufacturer']
-        output = self.command_execute(Command_Args, 1)
-        return output
+        command_args = ['wmic', 'baseboard', 'get', 'manufacturer']
+        return self.clean_output(self.command_execute(command_args)) 
     
     # Obtiene el modelo de la unidad de almacenamiento principal.
     def disk_model(self):
         command_args = ['wmic', 'diskdrive', 'where', 'index = 0', 'get', 'model', '/all']
-        output = self.command_execute(command_args, 1)
-        return output
+        return self.clean_output(self.command_execute(command_args))
 
     # Obtiene el nombre completo y datos principales del CPU.
     def cpu_name_info(self):
-        Command_Args = ['wmic', 'cpu', 'get', 'name']
-        output = self.command_execute(Command_Args, 1)
-        return output
+        command_args = ['wmic', 'cpu', 'get', 'name']
+        return self.clean_output(self.command_execute(command_args))
     
     # Obtiene la version del producto Windows instalado en el sistema.
     def win_product(self):
-        Command_Args = ['wmic', 'os', 'get', 'caption']
-        output = self.command_execute(Command_Args, 1)
-        return output
+        command_args = ['wmic', 'os', 'get', 'caption']
+        return self.clean_output(self.command_execute(command_args))
     
     # Obtiene la arquitectura del SO instalado.
     def win_architecture(self):
-        Command_Args = ['wmic', 'os', 'get', 'osarchitecture']
-        output = self.command_execute(Command_Args, 1)
-        return output
+        command_args = ['wmic', 'os', 'get', 'osarchitecture']
+        return self.clean_output(self.command_execute(command_args))
 
     # Obtiene el ID de escritorio de AnyDesk.
     def anydesk_id_checker(self):
@@ -174,5 +171,5 @@ class SystemInformationCatcher:
             f'AnyDeskID: {self.soft_anydesk}'
         )
         
-        with open(f'{self.machine_name}.txt','w') as file:
+        with open(f'{self.machine_name}.txt', 'w') as file:
             file.write(output)
