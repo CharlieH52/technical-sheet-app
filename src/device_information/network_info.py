@@ -1,11 +1,10 @@
 import psutil
 
-class NetworkInfo:
-    
-    default_name_adapter = 'Ethernet'
-    keys = ['MAC', 'IP4', 'IP6_1', 'IP6_2', 'IP6_temp', 'IP6_link']
-    address_list = []
+default_name_adapter = 'Ethernet'
+keys = ['MAC', 'IP4', 'IP6_1', 'IP6_2', 'IP6_temp', 'IP6_link']
+address_list = []
 
+class NetworkInfo:
     def __init__(self):
         self.network_info = {}
         self._get_network_data()

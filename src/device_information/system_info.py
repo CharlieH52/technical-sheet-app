@@ -2,8 +2,6 @@ import os
 import subprocess
 import re
 
-from app.shared.error_messages import ERROR_PRINTS
-
 class SystemInfo:
     # Ejecuta comandos y entrega la salida como string.
     def _execute_command(self, command=str):
