@@ -14,15 +14,15 @@ class Computer:
 
     def to_dictionary(self):
         return {
-            'DeviceName': self.device_name,
-            'UserDomainName': self.user_domain_name,
-            'MachineMAC': self.machine_mac,
-            'MachineIP': self.machine_ip,
-            'MoboMark':  self.mobo_mark,
-            'MoboModel': self.mobo_model,
-            'CPUInformation': self.cpu_info,
-            'OperativeSystem': self.operative_system,
-            'Storage': self.storage,
-            'MemoryCap': self.memory_cap,
-            'AnyDeskID': self.anydesk_id
+            'device_name': self.device_name,
+            'user_domain_name': self.user_domain_name,
+            'machine_mac': self.machine_mac,
+            'machine_ip': self.machine_ip,
+            'mobo_mark':  self.mobo_mark,
+            'mobo_model': self.mobo_model,
+            'cpu_info': self.cpu_info,
+            'operative_system': self.operative_system,
+            'storage': self.storage,
+            'memory_cap': self.memory_cap,
+            'anydesk_id': self.anydesk_id
         }
