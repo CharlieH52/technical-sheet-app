@@ -1,26 +1,32 @@
 import psutil
 
-default_name_adapter = 'Ethernet'
-keys = ['MAC', 'IP4', 'IP6_1', 'IP6_2', 'IP6_temp', 'IP6_link']
-address_list = []
 
 class NetworkInfo:
-    def __init__(self):
+    DEFAULT_ADAPTER = 'Ethernet'
+    KEYS = ['MAC', 'IP4', 'IP6_1', 'IP6_2', 'IP6_temp', 'IP6_link']
+    
+    def __init__(self, adapter_name: str = None):
+        self.adapter = adapter_name or self.DEFAULT_ADAPTER
+        self.address_list = []
         self.network_info = {}
-        self._get_network_data()
-        self.make_dictionary()
     
     # Obtiene la direccion IP del adaptador Ethernet principal.
     def _get_network_data(self):
         try:
-            for interface, info in psutil.net_if_addrs().items():
-                if interface == self.default_name_adapter:
-                    for data in info:
-                        self.address_list.append(data.address)
+            interfaces = psutil.net_if_addrs()
+            if self.adapter not in interfaces:
+                raise ValueError(f'{self.adapter} not found.')
+            
+            for data in interfaces[self.adapter]:
+                self.address_list.append(data.address)
             
         except Exception as e:
             print(e)
-
-    def make_dictionary(self):
-        for key, value in zip(self.keys, self.address_list):
-            self.network_info[key] = value
+    
+    def build_info_dict(self):
+        self.network_info = dict(zip(self.KEYS, self.address_list))
+        
+    def get_info(self):
+        self._get_network_data()
+        self.build_info_dict()
+        return self.network_info

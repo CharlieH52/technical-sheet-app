@@ -20,17 +20,17 @@ class SystemInfo:
         except Exception:
              return None
     
+    def win_product(self):
+        output = self._execute_command("wmic os get caption").split('\n')
+        product = [line.strip()for line in output if line.strip()][1]
+        return product
+    
+    # Obtiene la arquitectura del SO instalado.
+    def win_architecture(self):
+        output = self._execute_command("wmic os get osarchitecture").split('\n')
+        bits = [line.strip()for line in output if line.strip()][1]
+        return bits
+    
+    # Obtiene la version del producto Windows instalado en el sistema.
     def get_windows_version(self):
-        # Obtiene la version del producto Windows instalado en el sistema.
-        def _win_product():
-            output = self._execute_command("wmic os get caption").split('\n')
-            product = [line.strip()for line in output if line.strip()][1]
-            return product
-        
-        # Obtiene la arquitectura del SO instalado.
-        def _win_architecture():
-            output = self._execute_command("wmic os get osarchitecture").split('\n')
-            bits = [line.strip()for line in output if line.strip()][1]
-            return bits
-        
-        return (f"{_win_product()} {_win_architecture()}")
+        return (f"{self.win_product()} {self.win_architecture()}")

@@ -4,29 +4,31 @@ import re
 from os import getlogin
 
 ANYDESK_ERRORS = {
-    'MAIN_PATH': "No se encuentra el directorio principal. Instala Anydesk.",
+    'MAIN_PATH': "No se encuentra el directorio principal. Instala Anydesk.git",
     'READ_CONF_ERROR': "No se ha encontrado el archivo system.conf. Reinstala Anydesk.",
     'READ_ID_ERROR': "No se encuentra el ID dentro del archivo. Reinstala Anydesk"
 }
 
+user = getlogin()
+
 class AnyDeskInfo:
     def __init__(self):
-        self.user = getlogin()
-        self.anydesk_path = f'C:/Users/{self.user}/AppData/Roaming/AnyDesk'
-        self.config_file = f'C:/Users/{self.user}/AppData/Roaming/AnyDesk/system.conf'
+        self.anydesk_path = f'C:/Users/{user}/AppData/Roaming/AnyDesk'
+        self.config_file = f'C:/Users/{user}/AppData/Roaming/AnyDesk/system.conf'
 
-    # Obtiene el ID de escritorio de AnyDesk.
+    # Get the desktop ID of AnyDesk.
     def get_anydesk_desktop_id(self):
+        # Verify the NORMAL installation route and the .conf file with the ID.
         def _files_checker():
             try:
-                if not os.path.isdir(self.anydesk_path):
-                    return "Instalacion defectuosa o inexistente."
+                if not os.path.exists(self.anydesk_path):
+                    return "AnyDesk is not installed or the installation directory is different."
             except OSError:
                 print(ANYDESK_ERRORS['MAIN_PATH'])
 
             try:
-                if not os.path.isfile(self.config_file):
-                    return "Capturar manualmente."
+                if not os.path.exists(self.config_file):
+                    return "Type the ID manually."
             except OSError:
                 print(ANYDESK_ERRORS['READ_CONF_ERROR'])
             
