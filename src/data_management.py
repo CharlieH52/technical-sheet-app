@@ -5,7 +5,7 @@ from socket import gethostname
 
 WORKING_PATH = os.getcwd()
 COMPUTER_NAME = gethostname()
-FILE_NAME = 'localStorage.json'
+FILE_NAME = "localStorage.json"
 STORAGE_FILE = os.path.join(WORKING_PATH, FILE_NAME)
 
 class Writer:    
@@ -31,29 +31,35 @@ class Writer:
         except PermissionError as e:
             pass
     
-    def mac_id_checker(self, new_registry):
-        outdate_file = self.load_local_storage()
-        existing = next((registry for registry in outdate_file if  new_registry['machine_mac'] == registry['machine_mac']), None)
-        if existing:
-            for key, registry in new_registry.items():
-                old_value = existing.get(key)
-                new_value = new_registry.get(key)
-                if old_value !=  new_value:
-                    existing[key] = new_registry[key]
-            return existing
-    # 1. Bring the current data and the incomming data.
-    # 2. Compare both MAC Address.
-    # 3. If the address are equals, compare the data field by field.
-    # 3.1 If the address isnot in the current data, just add the new registry into the list with append.   
-    # 4. If the field is diferent, update it in the json data list.
-    # 5. Call the function to write the new data.
-
     # Give the updated data for write.
-    def update_local_storage(self, new_data):
+    def save_data_in_file(self, new_data):
         try:
-            with open(STORAGE_FILE, 'w') as file:
+            with open(STORAGE_FILE, "w") as file:
                 json.dump(new_data, file, indent=4)
         except OSError as e:
             print(e)
         except FileExistsError as e:
             print(e)
+    
+    def check_fields_and_update(self, old_data, new_data):
+        to_update = old_data.copy()
+        modified = False
+        for key in old_data:
+            old_value = old_data.get(key)
+            new_value = new_data.get(key)
+            if old_value !=  new_value:
+                to_update[key] = new_data[key]
+                modified = True
+        return to_update if modified else None
+
+    def find_and_update_by_mac(self, new_registry):
+        current_data = self.load_local_storage()
+        for index, registry in enumerate(current_data):
+            if new_registry['machine_mac'] == registry['machine_mac']:
+                changes = self.check_fields_and_update(registry, new_registry)
+                if changes:
+                    current_data[index] = changes
+                    self.save_data_in_file(current_data)
+                return
+        current_data.append(new_registry)
+        self.save_data_in_file(current_data)
