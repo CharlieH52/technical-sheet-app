@@ -1,11 +1,5 @@
+# PROTECT YOUR API KEY
 *.json
-
-# This script
-*.txt
-fichas/
-main_files/
-db/
-*.dict
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
