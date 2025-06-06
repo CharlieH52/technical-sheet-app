@@ -1,9 +1,10 @@
-from src.device_information.anydesk_info import AnyDeskInfo
-from src.device_information.hardware_info import HardwareInfo
-from src.device_information.network_info import NetworkInfo
-from src.device_information.system_info import SystemInfo
+from src.modules.anydesk import AnyDeskInfo
+from src.modules.hardware_info import HardwareInfo
+from src.modules.network_info import NetworkInfo
+from src.modules.system_info import SystemInfo
 from src.data_management import Writer
 from src.builder import ComputerBuilder
+import requests
 
 # Do you need use the API?
 SHEET_FUNCTION = True
@@ -21,6 +22,8 @@ if __name__ == "__main__":
     wr.find_and_update_by_mac(new_data.to_dictionary())
 
     if SHEET_FUNCTION == True:
-        google = GoogleSheet(file_name_gs, google_sheet, sheet_name)
-        google.post_new_computer()
+        endpoint = "http://127.0.0.1:8000/post"
+        inc_data = new_data.to_dictionary()
+        response = requests.post(url=endpoint, json=inc_data)
+
     
