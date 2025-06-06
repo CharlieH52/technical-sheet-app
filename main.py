@@ -8,7 +8,7 @@ from src.builder import ComputerBuilder
 import requests
 
 # Do you need use the API?
-SHEET_FUNCTION = False
+SHEET_FUNCTION = True
 
 if __name__ == "__main__":
     wr = Writer()
