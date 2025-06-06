@@ -1,15 +1,10 @@
 import os
-
 from os import getlogin
 
-
 class AnyDeskInfo:
-    ANYDESK_ERRORS = {
-        'MAIN_PATH': "No se encuentra el directorio principal. Instala Anydesk.git",
-        'CONFIG_FILE': "File: system.conf not found. Anydesk installation is corrupted or the default path is different.",
-        'READ_CONF_ERROR': "No se ha encontrado el archivo system.conf. Reinstala Anydesk.",
-        'READ_ID_ERROR': "No se encuentra el ID dentro del archivo. Reinstala Anydesk"
-    }
+    MAIN_PATH_ERROR = "Default path: C:/Users/current_user/AppData/Roaming/AnyDesk\nERROR: Not found.\nPlease, verify the route manually."
+    FILE_PATH_ERROR = "Default file path: C:/Users/current_user/AppData/Roaming/AnyDesk/system.conf\nERROR: Not found.\nTry reinstall Anydesk."
+    # READ_ID_ERROR = "ID key: ad.anynet.id\nERROR: The key is not in system.conf.\nTry to connect with a remote desktop to generate it or reinstall Anydesk."
 
     def __init__(self):
         self.user = getlogin()
@@ -28,8 +23,8 @@ class AnyDeskInfo:
                     key, value = line.strip().split('=', 1)
                     config[key] = value
             return config
-        except Exception:
-            print("")
+        except (FileNotFoundError, OSError):
+            print(self.FILE_PATH_ERROR)
             return None
 
     # Check the DEFAULT installation route.
@@ -37,14 +32,14 @@ class AnyDeskInfo:
         try:
             return os.path.exists(self.anydesk_path)
         except OSError:
-            print(self.ANYDESK_ERRORS['MAIN_PATH'])
+            print(self.MAIN_PATH_ERROR)
             return False
         
     def __check_conf_file(self) -> bool:
         try:
             return os.path.exists(self.config_file)
         except OSError:
-            print(self.ANYDESK_ERRORS['READ_CONF_ERROR'])
+            print(self.FILE_PATH_ERROR)
             return False
         
     def __check_desktop_id(self) -> bool:
