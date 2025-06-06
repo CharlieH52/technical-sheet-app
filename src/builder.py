@@ -1,6 +1,6 @@
 from platform import node
 
-from src.classes.computer_class import Computer
+from object.computer_object import Computer
 
 class ComputerBuilder:
     def __init__(self, network_provider, hardware_provider, system_provider, anydesk_provider):
@@ -12,7 +12,7 @@ class ComputerBuilder:
     def get_all_data(self) -> Computer:
         self.network.get_info()
         return Computer(device_name = node(),
-                       user_domain_name = None,
+                       user_name = "String incoming -> Pending",
                        machine_mac = self.network.network_info['MAC'],
                        machine_ip = self.network.network_info['IP4'],
                        mobo_mark = self.hardware.get_motherboard_manufacturer(),
