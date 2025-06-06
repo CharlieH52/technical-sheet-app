@@ -5,8 +5,8 @@ class NetworkInfo:
     DEFAULT_ADAPTER = 'Ethernet'
     KEYS = ['MAC', 'IP4', 'IP6_1', 'IP6_2', 'IP6_temp', 'IP6_link']
     
-    def __init__(self, adapter_name: str = None):
-        self.adapter = adapter_name or self.DEFAULT_ADAPTER
+    def __init__(self):
+        self.adapter = self.DEFAULT_ADAPTER
         self.address_list = []
         self.network_info = {}
     

@@ -46,7 +46,7 @@ class AnyDeskInfo:
         keys = self.__read_config_file(self.config_file)
         if keys is None:
             return False 
-        return any(self.id_key in key for key, _ in keys)
+        return any(self.id_key in key for key, value in keys.items())
                 
     def __check_integrity(self) -> bool:
         if not self.__check_installation_path():
@@ -66,6 +66,7 @@ class AnyDeskInfo:
         if verify: 
             config_keys = self.__read_config_file(self.config_file)
             if config_keys is None:
+                print("Entrada incorrecta")
                 return self.none_id
-            return config_keys.get(config_keys[self.id_key], self.none_id)
+            return config_keys.get(self.id_key, self.none_id)
         return self.none_id
