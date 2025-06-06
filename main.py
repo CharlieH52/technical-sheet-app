@@ -1,4 +1,3 @@
-from src.google_connect.google_actions import GoogleSheet
 from src.device_information.anydesk_info import AnyDeskInfo
 from src.device_information.hardware_info import HardwareInfo
 from src.device_information.network_info import NetworkInfo
@@ -7,7 +6,7 @@ from src.data_management import Writer
 from src.builder import ComputerBuilder
 
 # Do you need use the API?
-SHEET_FUNCTION = False
+SHEET_FUNCTION = True
 
 # Google Sheet Config Lines
 file_name_gs = "service_account.json"
@@ -23,4 +22,5 @@ if __name__ == "__main__":
 
     if SHEET_FUNCTION == True:
         google = GoogleSheet(file_name_gs, google_sheet, sheet_name)
+        google.post_new_computer()
     
