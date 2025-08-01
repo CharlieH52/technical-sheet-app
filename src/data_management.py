@@ -1,6 +1,7 @@
 import os
 import json
 
+from src.pop_up import PopUp
 from socket import gethostname
 
 WORKING_PATH = os.getcwd()
@@ -28,8 +29,6 @@ class Writer:
         except OSError as e:
             print(f"Error alcanzado. {e}")
         except json.JSONDecodeError as e:
-            print(f"TIPO DE SALIDA>> {type(data)}")
-            print(f"DATOS>> {data}")
             data = []
         return data
     
@@ -60,6 +59,7 @@ class Writer:
                 if changes:
                     current_data[index] = changes
                     self.save_data_in_file(current_data)
-                return
+                break
         current_data.append(new_registry)
         self.save_data_in_file(current_data)
+        PopUp("Estado", "Ficha guardada correctamente.")

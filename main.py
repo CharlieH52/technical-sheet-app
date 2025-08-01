@@ -5,11 +5,10 @@ from src.modules.mod_os import OperativeSystem
 from src.modules.mod_user import UserInformation 
 from src.data_management import Writer
 from src.builder import ComputerBuilder
-from src.pop_up import PopUp
 import requests
 
 # Do you need use the API?
-SHEET_FUNCTION = True
+SHEET_FUNCTION = False
 
 if __name__ == "__main__":
     wr = Writer()
@@ -17,8 +16,6 @@ if __name__ == "__main__":
     new_data = data_device.get_all_data()
 
     wr.find_and_update_by_mac(new_data.to_dictionary())
-
-    PopUp("Estado", "Ficha guardada correctamente.")
 
     if SHEET_FUNCTION == True:
         endpoint = "http://127.0.0.1:8000/post"
