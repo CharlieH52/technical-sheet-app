@@ -20,16 +20,18 @@ class Writer:
         except OSError as e:
             pass
         
-    def load_local_storage(self):
+    def load_local_storage(self) -> list[dict[str, str]]:
+        data = []
         try:
             with open(STORAGE_FILE, "r") as file:
                 data = json.load(file)
-                return data
         except OSError as e:
-            pass
-
-        except PermissionError as e:
-            pass
+            print(f"Error alcanzado. {e}")
+        except json.JSONDecodeError as e:
+            print(f"TIPO DE SALIDA>> {type(data)}")
+            print(f"DATOS>> {data}")
+            data = []
+        return data
     
     # Give the updated data for write.
     def save_data_in_file(self, new_data):
@@ -37,8 +39,6 @@ class Writer:
             with open(STORAGE_FILE, "w") as file:
                 json.dump(new_data, file, indent=4)
         except OSError as e:
-            print(e)
-        except FileExistsError as e:
             print(e)
     
     def check_fields_and_update(self, old_data, new_data):
