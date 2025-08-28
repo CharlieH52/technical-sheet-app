@@ -1,4 +1,3 @@
-from datetime import date
 class Computer:
     def __init__(self,
                  id: int,
@@ -13,7 +12,7 @@ class Computer:
                  storage: str,
                  memory_cap: str,
                  anydesk_id: str,
-                 time_stamp: date 
+                 time_stamp: str 
                 ):
         
         self.id = id
@@ -30,7 +29,7 @@ class Computer:
         self.anydesk_id = anydesk_id
         self.time_stamp = time_stamp
 
-    def to_dictionary(self) -> dict[str, str | int | date]:
+    def to_dictionary(self) -> dict[str, str | int ]:
         return {
             'id': self.id,
             'anydesk_id': self.anydesk_id,
