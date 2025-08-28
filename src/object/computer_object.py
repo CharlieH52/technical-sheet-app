@@ -1,6 +1,5 @@
 class Computer:
     def __init__(self,
-                 id: int,
                  device_name: str, 
                  user_name: str,
                  machine_mac: str,
@@ -29,9 +28,8 @@ class Computer:
         self.anydesk_id = anydesk_id
         self.time_stamp = time_stamp
 
-    def to_dictionary(self) -> dict[str, str | int ]:
+    def to_dictionary(self) -> dict[str, str]:
         return {
-            'id': self.id,
             'anydesk_id': self.anydesk_id,
             'device_name': self.device_name,
             'user_name': self.user_name,

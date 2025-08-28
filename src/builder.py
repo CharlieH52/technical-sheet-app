@@ -17,8 +17,7 @@ class ComputerBuilder:
     
     def create_computer(self) -> Computer:
         self.network.get_info()
-        return Computer(id=0,
-                        device_name = node(),
+        return Computer(device_name = node(),
                         user_name = self.user.get_full_name(),
                         machine_mac = self.network.network_info['MAC'],
                         machine_ip = self.network.network_info['IP4'],
