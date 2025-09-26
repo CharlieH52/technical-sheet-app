@@ -28,8 +28,6 @@ class Writer:
         except OSError as e:
             print(f"Error alcanzado. {e}")
         except json.JSONDecodeError as e:
-            print(f"TIPO DE SALIDA>> {type(data)}")
-            print(f"DATOS>> {data}")
             data = []
         return data
     
