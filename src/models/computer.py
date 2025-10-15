@@ -10,11 +10,9 @@ class Computer:
                  operative_system: str,
                  storage: str,
                  memory_cap: str,
-                 anydesk_id: str,
-                 time_stamp: str 
+                 anydesk_id: str
                 ):
         
-        self.id = id
         self.device_name = device_name
         self.user_name = user_name
         self.machine_mac = machine_mac
@@ -26,7 +24,6 @@ class Computer:
         self.storage = storage
         self.memory_cap = memory_cap
         self.anydesk_id = anydesk_id
-        self.time_stamp = time_stamp
 
     def to_dictionary(self) -> dict[str, str]:
         return {
@@ -40,6 +37,5 @@ class Computer:
             'cpu_info': self.cpu_info,
             'operative_system': self.operative_system,
             'storage': self.storage,
-            'memory_cap': self.memory_cap,
-            'time_stamp': self.time_stamp
+            'memory_cap': self.memory_cap
         }
