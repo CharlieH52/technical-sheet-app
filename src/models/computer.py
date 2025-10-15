@@ -8,8 +8,8 @@ class Computer:
                  mobo_model: str,
                  cpu_info: str,
                  operative_system: str,
-                 storage: str,
-                 memory_cap: str,
+                 storage: int,
+                 memory_cap: int,
                  anydesk_id: str
                 ):
         
@@ -25,7 +25,7 @@ class Computer:
         self.memory_cap = memory_cap
         self.anydesk_id = anydesk_id
 
-    def to_dictionary(self) -> dict[str, str]:
+    def to_dictionary(self) -> dict[str, str | int]:
         return {
             'anydesk_id': self.anydesk_id,
             'device_name': self.device_name,
