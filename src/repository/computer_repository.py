@@ -3,19 +3,18 @@ import json
 
 from socket import gethostname
 
-WORKING_PATH = os.getcwd()
-COMPUTER_NAME = gethostname()
-FILE_NAME = "localStorage.json"
-STORAGE_FILE = os.path.join(WORKING_PATH, FILE_NAME)
-
-class Writer:    
+class ComputerRepositoryLocal:    
     def __init__(self):
+        self.WORKING_PATH = os.getcwd()
+        self.COMPUTER_NAME = gethostname()
+        self.FILE_NAME = "localStorage.json"
+        self.STORAGE_FILE = os.path.join(self.WORKING_PATH, self.FILE_NAME)
         self.check_local_storage()
 
     def check_local_storage(self):
         try:
-            if not os.path.exists(STORAGE_FILE):
-                with open(STORAGE_FILE, "w") as file:
+            if not os.path.exists(self.STORAGE_FILE):
+                with open(self.STORAGE_FILE, "w") as file:
                     json.dump([], file)
         except OSError as e:
             pass
@@ -23,7 +22,7 @@ class Writer:
     def load_local_storage(self) -> list[dict[str, str]]:
         data = []
         try:
-            with open(STORAGE_FILE, "r") as file:
+            with open(self.STORAGE_FILE, "r") as file:
                 data = json.load(file)
         except OSError as e:
             print(f"Error alcanzado. {e}")
@@ -34,7 +33,7 @@ class Writer:
     # Give the updated data for write.
     def save_data_in_file(self, new_data):
         try:
-            with open(STORAGE_FILE, "w") as file:
+            with open(self.STORAGE_FILE, "w") as file:
                 json.dump(new_data, file, indent=4)
         except OSError as e:
             print(e)
