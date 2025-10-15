@@ -1,7 +1,8 @@
-import os
-import json
-
+from dotenv import load_dotenv
 from socket import gethostname
+import psycopg2
+import json
+import os
 
 class ComputerRepositoryLocal:    
     def __init__(self):
@@ -60,3 +61,37 @@ class ComputerRepositoryLocal:
                 return
         current_data.append(new_registry)
         self.save_data_in_file(current_data)
+
+class ComputerRepositoryPostgres:
+    
+    load_dotenv()
+
+    def __init__(self) -> None:
+        self.USER = os.getenv("user")
+        self.PASSWORD = os.getenv("password")
+        self.HOST = os.getenv("host")
+        self.PORT = os.getenv("port")
+        self.DBNAME = os.getenv("dbname")
+
+    def post_computer_on_database(self):
+        try:
+            connection = psycopg2.connect(
+                user=self.USER,
+                password=self.PASSWORD,
+                host=self.HOST,
+                port=self.PORT,
+                dbname=self.DBNAME
+            )
+            cursor = connection.cursor()
+            
+            cursor.execute("SELECT NOW();")
+            result = cursor.fetchone()
+            print("Current Time:", result)
+
+            # Close the cursor and connection
+            cursor.close()
+            connection.close()
+            print("Connection closed.")
+
+        except Exception as e:
+            print(f"Failed to connect: {e}")
