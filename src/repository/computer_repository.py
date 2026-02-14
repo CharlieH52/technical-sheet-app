@@ -2,21 +2,24 @@ import os
 import json
 
 from src.pop_up import PopUp
+from dotenv import load_dotenv
 from socket import gethostname
+import psycopg2
+import json
+import os
 
-WORKING_PATH = os.getcwd()
-COMPUTER_NAME = gethostname()
-FILE_NAME = "localStorage.json"
-STORAGE_FILE = os.path.join(WORKING_PATH, FILE_NAME)
-
-class Writer:    
+class ComputerRepositoryLocal:    
     def __init__(self):
+        self.WORKING_PATH = os.getcwd()
+        self.COMPUTER_NAME = gethostname()
+        self.FILE_NAME = "localStorage.json"
+        self.STORAGE_FILE = os.path.join(self.WORKING_PATH, self.FILE_NAME)
         self.check_local_storage()
 
     def check_local_storage(self):
         try:
-            if not os.path.exists(STORAGE_FILE):
-                with open(STORAGE_FILE, "w") as file:
+            if not os.path.exists(self.STORAGE_FILE):
+                with open(self.STORAGE_FILE, "w") as file:
                     json.dump([], file)
         except OSError as e:
             pass
@@ -24,7 +27,7 @@ class Writer:
     def load_local_storage(self) -> list[dict[str, str]]:
         data = []
         try:
-            with open(STORAGE_FILE, "r") as file:
+            with open(self.STORAGE_FILE, "r") as file:
                 data = json.load(file)
         except OSError as e:
             print(f"Error alcanzado. {e}")
@@ -35,7 +38,7 @@ class Writer:
     # Give the updated data for write.
     def save_data_in_file(self, new_data):
         try:
-            with open(STORAGE_FILE, "w") as file:
+            with open(self.STORAGE_FILE, "w") as file:
                 json.dump(new_data, file, indent=4)
         except OSError as e:
             print(e)
@@ -63,3 +66,37 @@ class Writer:
         current_data.append(new_registry)
         self.save_data_in_file(current_data)
         PopUp("Estado", "Ficha guardada correctamente.")
+
+class ComputerRepositoryPostgres:
+    
+    load_dotenv()
+
+    def __init__(self) -> None:
+        self.USER = os.getenv("user")
+        self.PASSWORD = os.getenv("password")
+        self.HOST = os.getenv("host")
+        self.PORT = os.getenv("port")
+        self.DBNAME = os.getenv("dbname")
+
+    def post_computer_on_database(self):
+        try:
+            connection = psycopg2.connect(
+                user=self.USER,
+                password=self.PASSWORD,
+                host=self.HOST,
+                port=self.PORT,
+                dbname=self.DBNAME
+            )
+            cursor = connection.cursor()
+            
+            cursor.execute("SELECT NOW();")
+            result = cursor.fetchone()
+            print("Current Time:", result)
+
+            # Close the cursor and connection
+            cursor.close()
+            connection.close()
+            print("Connection closed.")
+
+        except Exception as e:
+            print(f"Failed to connect: {e}")
