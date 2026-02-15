@@ -1,14 +1,14 @@
-from src.command_processor import CommandProcessor
+from app.command_processor import CommandProcessor
 from psutil import disk_usage, virtual_memory
 
 class HardwareInfo:
     def __init__(self):
-        self.class_processor = "Win32_Processor"
-        self.class_baseboard = "Win32_BaseBoard"
-        self.class_diskdrive = "Win32_DiskDrive"
-        self.cpu = CommandProcessor(self.class_processor).get_parsed_output()
-        self.baseboard = CommandProcessor(self.class_baseboard).get_parsed_output()
-        self.diskdrive = CommandProcessor(self.class_diskdrive).get_parsed_output()
+        self.class_processor = ["powershell", "get-ciminstance", "-class Win32_Processor | Select-Object * | Format-List"]
+        self.class_baseboard = ["powershell", "get-ciminstance", "-class Win32_BaseBoard | Select-Object * | Format-List"]
+        self.class_diskdrive = ["powershell", "get-ciminstance", "-class Win32_DiskDrive | Select-Object * | Format-List"]
+        self.cpu = CommandProcessor(self.class_processor).get_output_dictionary()
+        self.baseboard = CommandProcessor(self.class_baseboard).get_output_dictionary()
+        self.diskdrive = CommandProcessor(self.class_diskdrive).get_output_dictionary()
 
     # bits to bytes converter.
     def _bytes_converter(self, total_Bytes):

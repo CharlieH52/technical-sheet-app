@@ -1,15 +1,17 @@
 import subprocess
 
 class CommandProcessor:
-    def __init__(self, command: str):
+    def __init__(self, command: list):
         self.command = command
-        
+
+    # IMPORTANT
+    # You need to be sure that your command list returns text with the pipeline "FORMAT-LIST"
+
     def __execute_command(self) -> subprocess.CompletedProcess:
-        pswCommand = ["powershell", "get-ciminstance", f"-class {self.command} | Select-Object * | Format-List"]
-        output = subprocess.run(pswCommand, text=True, capture_output=True, shell=True)
-        return output
-    
-    def get_parsed_output(self) -> dict[str, str]:
+        pswCommand = self.command
+        return subprocess.run(pswCommand, text=True, capture_output=True, shell=True)
+
+    def get_output_dictionary(self) -> dict[str, str]:
         output = self.__execute_command()
         command_data = {}
         for line in output.stdout.splitlines():
