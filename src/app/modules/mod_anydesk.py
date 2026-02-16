@@ -7,7 +7,7 @@ class AnyDeskInfo:
         self.id_key = "ad.anynet.id"
         self.anydesk_path = f"C:/Users/{self.user}/AppData/Roaming/AnyDesk"
         self.config_file = f"C:/Users/{self.user}/AppData/Roaming/AnyDesk/system.conf"
-        self.none_id = "0000000000"
+        self.none_id = 0
 
     # Read .config file and return a dictionary.
     # For Python older version than 3.10 change None for Optional from typing...
@@ -16,8 +16,10 @@ class AnyDeskInfo:
         try:
             with open(file_path, "r") as file:
                 for line in file:
-                    key, value = line.strip().split('=', 1)
-                    config[key] = value
+                    key, space, value = line.partition('=')
+                    if not space:
+                        continue
+                    config[key.strip()] = value.strip()
             return config
         except (FileNotFoundError, OSError):
             PopUp('Error', f'Config file not found. Check the default path: {self.config_file}.')
@@ -57,12 +59,12 @@ class AnyDeskInfo:
         return True
 
     # Orchestrator
-    def get_anydesk_desktop_id(self) -> str:
+    def get_anydesk_desktop_id(self) -> int:
         verify = self.__check_integrity()
         if verify: 
             config_keys = self.__read_config_file(self.config_file)
             if config_keys is None:
                 PopUp('Desktop ID missed', 'Please, verify your Anydesk installation.')
                 return self.none_id
-            return config_keys.get(self.id_key, self.none_id)
+            return int(config_keys.get(self.id_key, self.none_id))
         return self.none_id
