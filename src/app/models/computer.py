@@ -8,9 +8,15 @@ class Computer:
                  mobo_model: str,
                  cpu_info: str,
                  operative_system: str,
-                 storage: int,
-                 memory_cap: int,
-                 anydesk_id: str
+                 storage_model: str,
+                 storage_cap: int,
+                 dimma_mark: str,
+                 dimma_model: str,
+                 dimma_cap: int,
+                 dimmb_mark: str,
+                 dimmb_model: str,
+                 dimmb_cap: int,
+                 anydesk_id: int
                 ):
         
         self.device_name = device_name
@@ -21,8 +27,14 @@ class Computer:
         self.mobo_model = mobo_model
         self.cpu_info = cpu_info
         self.operative_system = operative_system
-        self.storage = storage
-        self.memory_cap = memory_cap
+        self.storage_model = storage_model
+        self.storage_cap = storage_cap
+        self.dimm_1_mark = dimma_mark
+        self.dimm_1_model = dimma_model
+        self.dimm_1_cap = dimma_cap
+        self.dimm_2_mark = dimmb_mark
+        self.dimm_2_model = dimmb_model
+        self.dimm_2_cap = dimmb_cap
         self.anydesk_id = anydesk_id
 
     def to_dictionary(self) -> dict[str, str | int]:
@@ -36,6 +48,12 @@ class Computer:
             'mobo_model': self.mobo_model,
             'cpu_info': self.cpu_info,
             'operative_system': self.operative_system,
-            'storage': self.storage,
-            'memory_cap': self.memory_cap
+            'storage_model': self.storage_model,
+            'storage_cap': self.storage_cap,
+            'dimm_1_mark': self.dimm_1_mark,
+            'dimm_1_model': self.dimm_1_model,
+            'dimm_1_cap': self.dimm_1_cap,
+            'dimm_2_mark': self.dimm_2_mark,
+            'dimm_2_model': self.dimm_2_model,
+            'dimm_2_cap': self.dimm_2_cap,
         }

@@ -1,5 +1,4 @@
 from app.models.computer import Computer
-# from datetime import datetime
 from platform import node
 
 
@@ -10,10 +9,6 @@ class ComputerBuilder:
         self.system = system_provider
         self.anydesk = anydesk_provider
         self.user = user_provider
-    #     self.current_time = self.__generate_time_stamp()
-
-    # def __generate_time_stamp(self) -> str:
-    #     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     def create_computer(self) -> Computer:
         return Computer(
@@ -25,8 +20,13 @@ class ComputerBuilder:
             mobo_model = self.hardware.get_motherboard_model(),
             cpu_info = self.hardware.get_cpu_model(),
             operative_system = self.system.get_windows_version(),
-            storage = self.hardware.get_main_storage(),
-            memory_cap = self.hardware.get_total_memory_ram(),
+            storage_model = self.hardware.get_disk_model(),
+            storage_cap= self.hardware.get_disk_cap(),
+            dimma_mark= self.hardware.get_memory_dimm_a_manufacturer(),
+            dimma_model= self.hardware.get_memory_dimm_a_model(),
+            dimma_cap = self.hardware.get_memory_dimm_a_cap(),
+            dimmb_mark= self.hardware.get_memory_dimm_b_manufacturer(),
+            dimmb_model= self.hardware.get_memory_dimm_b_model(),
+            dimmb_cap = self.hardware.get_memory_dimm_b_cap(),
             anydesk_id = self.anydesk.get_anydesk_desktop_id()
-            # time_stamp= self.current_time
             )
