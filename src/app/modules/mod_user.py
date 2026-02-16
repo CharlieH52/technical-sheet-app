@@ -1,4 +1,4 @@
-from src.app.command_processor import CommandProcessor
+from app.command_processor import CommandProcessor
 
 class UserInformation:
     def __init__(self):
