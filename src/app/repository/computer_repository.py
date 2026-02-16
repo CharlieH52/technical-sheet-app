@@ -57,7 +57,8 @@ class ComputerRepositoryLocal:
                 if changes:
                     current_data[index] = changes
                     self.save_data_in_file(current_data)
-                break
+                    PopUp("Estado", "Registro actualizado correctamente.")
+                return
         current_data.append(new_registry)
         self.save_data_in_file(current_data)
         PopUp("Estado", "Ficha guardada correctamente.")
