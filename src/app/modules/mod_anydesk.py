@@ -1,13 +1,9 @@
 import os
-from os import getlogin
+from app.notifications.popup import PopUp
 
 class AnyDeskInfo:
-    MAIN_PATH_ERROR = "Default path: C:/Users/current_user/AppData/Roaming/AnyDesk\nERROR: Not found.\nPlease, verify the route manually."
-    FILE_PATH_ERROR = "Default file path: C:/Users/current_user/AppData/Roaming/AnyDesk/system.conf\nERROR: Not found.\nTry reinstall Anydesk."
-    # READ_ID_ERROR = "ID key: ad.anynet.id\nERROR: The key is not in system.conf.\nTry to connect with a remote desktop to generate it or reinstall Anydesk."
-
     def __init__(self):
-        self.user = getlogin()
+        self.user = os.getlogin()
         self.id_key = "ad.anynet.id"
         self.anydesk_path = f"C:/Users/{self.user}/AppData/Roaming/AnyDesk"
         self.config_file = f"C:/Users/{self.user}/AppData/Roaming/AnyDesk/system.conf"
@@ -24,7 +20,7 @@ class AnyDeskInfo:
                     config[key] = value
             return config
         except (FileNotFoundError, OSError):
-            print(self.FILE_PATH_ERROR)
+            PopUp('Error', f'Config file not found. Check the default path: {self.config_file}.')
             return None
 
     # Check the DEFAULT installation route.
@@ -32,14 +28,14 @@ class AnyDeskInfo:
         try:
             return os.path.exists(self.anydesk_path)
         except OSError:
-            print(self.MAIN_PATH_ERROR)
+            PopUp('Error', f'Is Anydesk installed?, please verify the installation default path: {self.anydesk_path}.')
             return False
         
     def __check_conf_file(self) -> bool:
         try:
             return os.path.exists(self.config_file)
         except OSError:
-            print(self.FILE_PATH_ERROR)
+            PopUp('Error', f'Config file not found, please verify system.conf file path: {self.config_file}.')
             return False
         
     def __check_desktop_id(self) -> bool:
@@ -66,7 +62,7 @@ class AnyDeskInfo:
         if verify: 
             config_keys = self.__read_config_file(self.config_file)
             if config_keys is None:
-                print("Entrada incorrecta")
+                PopUp('Desktop ID missed', 'Please, verify your Anydesk installation.')
                 return self.none_id
             return config_keys.get(self.id_key, self.none_id)
         return self.none_id
