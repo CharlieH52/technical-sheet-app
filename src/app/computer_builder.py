@@ -13,7 +13,7 @@ class ComputerBuilder:
     def create_computer(self) -> Computer:
         return Computer(
             device_name = node(),
-            user_name = self.user.get_full_name(),
+            user_name = self.user.get_domain_name(),
             machine_mac = self.network.get_mac_address(),
             machine_ip = self.network.get_ip_address(),
             mobo_mark = self.hardware.get_motherboard_manufacturer(),
