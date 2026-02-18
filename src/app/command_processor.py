@@ -1,4 +1,5 @@
 import subprocess
+import json
 
 class CommandProcessor:
     def __init__(self, command: list):
@@ -20,3 +21,8 @@ class CommandProcessor:
                 continue
             command_data[key.strip()] = value.strip()
         return command_data
+    
+    def get_from_json(self) -> list[dict[str, str]]:
+        output = self.__execute_command()
+        return json.loads(output.stdout)
+        

@@ -22,11 +22,6 @@ class ComputerBuilder:
             operative_system = self.system.get_windows_version(),
             storage_model = self.hardware.get_disk_model(),
             storage_cap= self.hardware.get_disk_cap(),
-            dimma_mark= self.hardware.get_memory_dimm_a_manufacturer(),
-            dimma_model= self.hardware.get_memory_dimm_a_model(),
-            dimma_cap = self.hardware.get_memory_dimm_a_cap(),
-            dimmb_mark= self.hardware.get_memory_dimm_b_manufacturer(),
-            dimmb_model= self.hardware.get_memory_dimm_b_model(),
-            dimmb_cap = self.hardware.get_memory_dimm_b_cap(),
-            anydesk_id = self.anydesk.get_anydesk_desktop_id()
+            anydesk_id = self.anydesk.get_anydesk_desktop_id(),
+            dimm_list = self.hardware.create_ram_objects()
             )
