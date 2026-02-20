@@ -1,6 +1,8 @@
 import os
 import json
 from app.notifications.popup import PopUp
+from app.models.computer import Computer
+from app.models.ram import DimmRam
 from socket import gethostname
 
 class ComputerRepositoryLocal:    
@@ -31,6 +33,51 @@ class ComputerRepositoryLocal:
         except json.JSONDecodeError as e:
             current_data = []
         return current_data
+    
+    def create_computer_object(self, computer_data: dict[str, str | int | list[DimmRam]]) -> Computer:
+        pass
+
+    def create_dimm_ram_object(self, dimm_data: dict[str,str | int]) -> DimmRam:
+        pass
+
+    def data_manager(self) -> list[Computer]:
+        current_data = self.load_local_storage()
+        obj_computer_list = []
+        for computer in current_data:
+            obj_dimm_list = []
+            dimm_ram_list = computer.get("dimm_list")
+            for dimm in dimm_ram_list:
+                dimm_object = DimmRam(
+                    caption=dimm.get("Caption"),
+                    manufacturer=dimm.get("Manufacturer"),
+                    part_number=dimm.get("PartNumber"),
+                    model=dimm.get("Model"),
+                    tag=dimm.get("Tag"),
+                    bank_label=dimm.get("BankLabel"),
+                    device_locator=dimm.get("DeviceLocator"),
+                    capacity=dimm.get("Capacity"),
+                    speed=dimm.get("Speed"),
+                    configured_clock_speed=dimm.get("ConfiguredClockSpeed"),
+                    configured_voltage=dimm.get("ConfiguredVoltage")
+                )
+                obj_dimm_list.append(dimm_object)
+            computer_object = Computer(
+                device_name=computer.get("device_name"),
+                user_name=computer.get("user_name"),
+                machine_mac=computer.get("machine_mac"),
+                machine_ip=computer.get("machine_ip"),
+                mobo_mark=computer.get("mobo_mark"),
+                mobo_model=computer.get("mobo_model"),
+                cpu_info=computer.get("cpu_info"),
+                operative_system=computer.get("operative_system"),
+                storage_model=computer.get("storage_model"),
+                storage_cap=computer.get("storage_cap"),
+                anydesk_id=computer.get("anydesk_id"),
+                dimm_list=obj_dimm_list
+            )
+            obj_computer_list.append(computer_object)
+        return obj_computer_list
+
     # Give the updated data for write.
     def save_data_in_file(self, new_data):
         try:
@@ -63,6 +110,16 @@ class ComputerRepositoryLocal:
         current_data.append(new_registry)
         self.save_data_in_file(current_data)
         PopUp("Estado", "Ficha guardada correctamente.")
+
+# 1 Cargar los datos desde el archivo json
+# 2 Recorrer la lista de computadoras
+# 3 Obtener lista de ram
+# 4 Convertir cada Ram en objetos DimmRam
+# 5 Crear una lista de Objetos DimmRam
+# 6 Obtener informacion de computadora
+# 7 Crear objeto Computadora e insertar la lista de DimmRam
+# 8 Crear lista de computadoras
+# 9 Devolver lista de computadoras
 
 # class ComputerRepositoryPostgres:
     
