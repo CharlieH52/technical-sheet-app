@@ -11,16 +11,18 @@ class ComputerRepositoryLocal:
         self.STORAGE_FILE = os.path.join(self.WORKING_PATH, self.FILE_NAME)
         self.check_local_storage()
 
-    def check_local_storage(self):
+    # Verify if JSON local storage exists.
+    def check_local_storage(self) -> None:
         try:
             if not os.path.exists(self.STORAGE_FILE):
                 with open(self.STORAGE_FILE, "w") as file:
-                    json.dump([], file)
-        except OSError as e:
-            pass
+                    json.dump([], file) # These brackets are important for the loads method.
+        except PermissionError as e:
+            print(e)
         
-    def load_local_storage(self) -> list[dict[str, str]]:
-        data = []
+    # Read local storage file and returns a non serialized data structure.
+    def load_local_storage(self) -> list[dict[str,str | int | dict[str,str]]]:
+        current_data = []
         try:
             with open(self.STORAGE_FILE, "r") as file:
                 data = json.load(file)
