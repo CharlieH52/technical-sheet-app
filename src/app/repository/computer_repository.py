@@ -25,13 +25,12 @@ class ComputerRepositoryLocal:
         current_data = []
         try:
             with open(self.STORAGE_FILE, "r") as file:
-                data = json.load(file)
+                current_data = json.load(file)
         except OSError as e:
             print(f"Error alcanzado. {e}")
         except json.JSONDecodeError as e:
-            data = []
-        return data
-    
+            current_data = []
+        return current_data
     # Give the updated data for write.
     def save_data_in_file(self, new_data):
         try:
