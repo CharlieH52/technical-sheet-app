@@ -13,7 +13,7 @@ class ComputerBuilder:
     def create_computer(self) -> Computer:
         return Computer(
             device_name = node(),
-            user_name = self.user.get_full_name(),
+            user_name = self.user.get_domain_name(),
             machine_mac = self.network.get_mac_address(),
             machine_ip = self.network.get_ip_address(),
             mobo_mark = self.hardware.get_motherboard_manufacturer(),
@@ -22,11 +22,6 @@ class ComputerBuilder:
             operative_system = self.system.get_windows_version(),
             storage_model = self.hardware.get_disk_model(),
             storage_cap= self.hardware.get_disk_cap(),
-            dimma_mark= self.hardware.get_memory_dimm_a_manufacturer(),
-            dimma_model= self.hardware.get_memory_dimm_a_model(),
-            dimma_cap = self.hardware.get_memory_dimm_a_cap(),
-            dimmb_mark= self.hardware.get_memory_dimm_b_manufacturer(),
-            dimmb_model= self.hardware.get_memory_dimm_b_model(),
-            dimmb_cap = self.hardware.get_memory_dimm_b_cap(),
-            anydesk_id = self.anydesk.get_anydesk_desktop_id()
+            anydesk_id = self.anydesk.get_anydesk_desktop_id(),
+            dimm_list = self.hardware.create_ram_objects()
             )

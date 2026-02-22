@@ -8,17 +8,15 @@ from app.computer_builder import ComputerBuilder
 
 def main():
     crl = ComputerRepositoryLocal()
-    data_device = ComputerBuilder(
+    current_computer_list = crl.create_computer_list()
+    new_computer = ComputerBuilder(
         anydesk_provider=AnyDeskInfo(),
         user_provider=UserInformation(),
         hardware_provider=HardwareInfo(),
         system_provider=OperativeSystem(),
         network_provider=NetworkInfo()
-        )
-    computer = data_device.create_computer()
-    computer_data = computer.to_dictionary()
-
-    crl.find_and_update_by_mac(computer_data)
-
+        ).create_computer()
+    updated_computer_list = crl.find_and_update_by_mac(current_computer_list, new_computer)
+    crl.save_data_in_file(updated_computer_list)
 if __name__ == "__main__":
     main()
