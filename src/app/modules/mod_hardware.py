@@ -50,23 +50,6 @@ class HardwareInfo:
     # Obtain the name of the manufacturer.
     def get_motherboard_manufacturer(self):
         return self.baseboard.get("Manufacturer")
-
-    # MEMORY RAM
-    # def get_memory_dimms(self):
-    #     for dimm in self.physicalmemory:
-
-    # def get_memory_dimm_a_manufacturer(self):
-    #     return self.dimm_a.get("Manufacturer")
-
-    # def get_memory_dimm_a_model(self):
-    #     return self.dimm_a.get("PartNumber")
-    
-    # def get_memory_dimm_a_channel(self):
-    #     return self.dimm_a.get("DeviceLocator")
-
-    # def get_memory_dimm_a_cap(self) -> int:
-    #     memory = self._bytes_converter(int(self.dimm_a.get("Capacity")))
-    #     return memory
     
     # MAIN STORAGE
     # Obtain the model name of the main storage device.

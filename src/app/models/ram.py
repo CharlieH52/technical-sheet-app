@@ -17,7 +17,7 @@ class DimmRam:
     def to_dictionary(self) -> dict[str, str | int]:
         return {
             'Caption': self.caption,
-            'Manufactuer': self.manufacturer,
+            'Manufacturer': self.manufacturer,
             'PartNumber': self.part_number,
             'Model': self.model,
             'Tag': self.tag,
