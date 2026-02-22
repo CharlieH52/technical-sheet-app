@@ -84,35 +84,96 @@ class ComputerRepositoryLocal:
             obj_computer_list.append(computer_object)
         return obj_computer_list
 
-    # Write the Computer list in the localstorage file.
+    # Convert a object list of DimmRam to an ordinary List/Dict structure.
+    def serialize_dimm_list(self, dimm_list: list[DimmRam]) -> list[dict[str, Any]]:
+        dimm_serialized_list = []
+        for dimm in dimm_list:
+            dimm_serialized = dimm.to_dictionary()
+            dimm_serialized_list.append(dimm_serialized)
+        return dimm_serialized_list
+    
+    # Convert a object list of Computer to an ordinary List/Dict structure.
+    def serialize_computer_list(self, computer_list: list[Computer]) -> list[dict[str, Any]]:
+        updated_data = computer_list
+        serialized_computer_list = []
+        for computer in updated_data:
+            dimm_serialized_list = self.serialize_dimm_list(computer.dimm_list)
+            computer_dict = {
+                'anydesk_id': computer.anydesk_id,
+                'device_name': computer.device_name,
+                'user_name': computer.user_name,
+                'machine_mac': computer.machine_mac,
+                'machine_ip': computer.machine_ip,
+                'mobo_mark': computer.mobo_mark,
+                'mobo_model': computer.mobo_model,
+                'cpu_info': computer.cpu_info,
+                'operative_system': computer.operative_system,
+                'storage_model': computer.storage_model,
+                'storage_cap': computer.storage_cap,
+                'dimm_list': dimm_serialized_list
+            }
+            serialized_computer_list.append(computer_dict)
+        return serialized_computer_list
+    
+    # Write the serialized Computer list into localstorage file.
     def save_data_in_file(self, new_data: list[Computer]) -> None:
+        serialized_computer_list = self.serialize_computer_list(new_data)
         try:
             with open(self.STORAGE_FILE, "w") as file:
-                json.dump(new_data, file, indent=4)
+                json.dump(serialized_computer_list, file, indent=4)
+                PopUp("Aviso","¡Ficha guardada correctamente!")
         except OSError as e:
             print(e)
-    
-    # def check_fields_and_update(self, old_data, new_data):
-    #     to_update = old_data.copy()
-    #     modified = False
-    #     for key in old_data:
-    #         old_value = old_data.get(key)
-    #         new_value = new_data.get(key)
-    #         if old_value !=  new_value:
-    #             to_update[key] = new_data[key]
-    #             modified = True
-    #     return to_update if modified else None
 
-    def find_and_update_by_mac(self, new_registry):
-        current_data = self.load_local_storage()
-        for index, registry in enumerate(current_data):
-            if new_registry['machine_mac'] == registry['machine_mac']:
-                # changes = self.check_fields_and_update(registry, new_registry)
-                if changes:
-                    current_data[index] = changes
-                    self.save_data_in_file(current_data)
-                    PopUp("Estado", "Registro actualizado correctamente.")
-                return
-        current_data.append(new_registry)
-        self.save_data_in_file(current_data)
-        PopUp("Estado", "Ficha guardada correctamente.")
+    # Return an updated dimmram list.
+    def update_dimm_list(self, current_list: list[DimmRam], new_data_list: list[DimmRam]) -> list[DimmRam]:
+        current_dimm_list = current_list
+        incoming_dimm_list = new_data_list
+        # CHECK this function, if some registry current or incoming changes his lenght of dimms
+        # function can raise a ValueError.
+        if len(current_dimm_list) != len(incoming_dimm_list):
+            PopUp("Precaucion", "La cantidad de dimm RAM es diferente en este registro.")
+
+        # Add function to check if a field need or not the update.
+        for dimm, current_dimm in zip(current_dimm_list, incoming_dimm_list):
+            dimm.caption = current_dimm.caption
+            dimm.manufacturer=current_dimm.manufacturer
+            dimm.part_number=current_dimm.part_number
+            dimm.model=current_dimm.model
+            dimm.tag=current_dimm.tag
+            dimm.bank_label=current_dimm.bank_label
+            dimm.device_locator=current_dimm.device_locator
+            dimm.capacity=current_dimm.capacity
+            dimm.speed=current_dimm.speed
+            dimm.configured_clock_speed=current_dimm.configured_clock_speed
+            dimm.configured_voltage=current_dimm.configured_voltage
+            
+        return current_dimm_list
+
+    # Return an updated computer object base data. 
+    def update_computer_base_info(self, current_data: Computer, new_data: Computer) -> Computer:
+        current_data.device_name=new_data.device_name
+        current_data.user_name=new_data.user_name
+        current_data.machine_ip=new_data.machine_ip
+        current_data.mobo_mark=new_data.mobo_mark
+        current_data.mobo_model=new_data.mobo_model
+        current_data.cpu_info=new_data.cpu_info
+        current_data.operative_system=new_data.operative_system
+        current_data.storage_model=new_data.storage_model
+        current_data.storage_cap=new_data.storage_cap
+        current_data.anydesk_id=new_data.anydesk_id
+        return current_data
+
+    # Check and update the current data from a Computer List object.
+    def find_and_update_by_mac(self, current_records: list[Computer], new_registry: Computer) -> list[Computer]:
+        for computer in current_records:
+            if computer.machine_mac != new_registry.machine_mac:
+                continue
+
+            computer.dimm_list = self.update_dimm_list(computer.dimm_list, new_registry.dimm_list)
+            self.update_computer_base_info(computer, new_registry)
+            
+            return current_records
+                
+        current_records.append(new_registry)
+        return current_records
