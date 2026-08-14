@@ -1,7 +1,7 @@
 import subprocess
 import os
 
-script_name = "src/app/__main__.py"
+script_name = "main.py"
 output_name = "GENERATE_TECH-SHEET"
 
 

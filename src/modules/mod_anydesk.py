@@ -1,5 +1,5 @@
 import os
-from app.notifications.popup import PopUp
+from src.notifications.popup import PopUp
 
 class AnyDeskInfo:
     def __init__(self):
