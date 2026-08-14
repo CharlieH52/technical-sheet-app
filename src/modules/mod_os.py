@@ -1,4 +1,4 @@
-from app.command_processor import CommandProcessor
+from src.command_processor import CommandProcessor
 
 class OperativeSystem:
 

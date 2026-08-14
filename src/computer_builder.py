@@ -1,4 +1,4 @@
-from app.models.computer import Computer
+from src.models.computer import Computer
 from platform import node
 
 

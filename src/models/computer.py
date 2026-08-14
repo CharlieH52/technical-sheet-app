@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from app.models.ram import DimmRam
+from src.models.ram import DimmRam
 
 @dataclass
 class Computer:

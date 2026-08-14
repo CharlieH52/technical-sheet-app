@@ -1,5 +1,5 @@
-from app.command_processor import CommandProcessor
-from app.models.ram import DimmRam
+from src.command_processor import CommandProcessor
+from src.models.ram import DimmRam
 
 class HardwareInfo:
     def __init__(self):
