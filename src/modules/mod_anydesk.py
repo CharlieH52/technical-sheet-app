@@ -1,70 +1,63 @@
+"""Lectura del ID de AnyDesk desde system.conf.
+
+Ruta preferente: ``%PROGRAMDATA%\\AnyDesk\\system.conf`` (instalación para todos
+los usuarios). Respaldo: ``%APPDATA%\\AnyDesk\\system.conf``. No se usa
+``os.getlogin()`` ni rutas hardcodeadas con el nombre del usuario.
+"""
+
+from __future__ import annotations
+
 import os
-from src.notifications.popup import PopUp
+from src.infra.diagnostics import diagnostics
+
 
 class AnyDeskInfo:
     def __init__(self):
-        self.user = os.getlogin()
         self.id_key = "ad.anynet.id"
-        self.anydesk_path = f"C:/Users/{self.user}/AppData/Roaming/AnyDesk"
-        self.config_file = f"C:/Users/{self.user}/AppData/Roaming/AnyDesk/system.conf"
         self.none_id = 0
 
-    # Read .config file and return a dictionary.
-    # For Python older version than 3.10 change None for Optional from typing...
-    def __read_config_file(self, file_path: str) -> dict[str, str] | None:
-        config = {}
+        program_data = os.getenv("PROGRAMDATA", r"C:\ProgramData")
+        app_data = os.getenv("APPDATA", "")
+        candidates = [
+            os.path.join(program_data, "AnyDesk", "system.conf"),
+        ]
+        if app_data:
+            candidates.append(os.path.join(app_data, "AnyDesk", "system.conf"))
+
+        self.config_candidates = candidates
+        self.config_file = next(
+            (path for path in candidates if os.path.isfile(path)), candidates[0]
+        )
+        diagnostics.record("anydesk_config", self.config_file, "environment")
+
+    def _read_config_file(self, file_path: str) -> dict[str, str] | None:
+        config: dict[str, str] = {}
         try:
-            with open(file_path, "r") as file:
+            with open(file_path, "r", encoding="utf-8", errors="replace") as file:
                 for line in file:
-                    key, space, value = line.partition('=')
-                    if not space:
+                    key, sep, value = line.partition("=")
+                    if not sep:
                         continue
                     config[key.strip()] = value.strip()
             return config
         except (FileNotFoundError, OSError):
-            PopUp('Error', f'Config file not found. Check the default path: {self.config_file}.')
             return None
 
-    # Check the DEFAULT installation route.
-    def __check_installation_path(self) -> bool:
-        try:
-            return os.path.exists(self.anydesk_path)
-        except OSError:
-            PopUp('Error', f'Is Anydesk installed?, please verify the installation default path: {self.anydesk_path}.')
-            return False
-        
-    def __check_conf_file(self) -> bool:
-        try:
-            return os.path.exists(self.config_file)
-        except OSError:
-            PopUp('Error', f'Config file not found, please verify system.conf file path: {self.config_file}.')
-            return False
-        
-    def __check_desktop_id(self) -> bool:
-        keys = self.__read_config_file(self.config_file)
-        if keys is None:
-            return False 
-        return any(self.id_key in key for key, value in keys.items())
-                
-    def __check_integrity(self) -> bool:
-        if not self.__check_installation_path():
-            return False
-
-        if not self.__check_conf_file():
-            return False
-        
-        if not self.__check_desktop_id():
-            return False
-        
-        return True
-
-    # Orchestrator
     def get_anydesk_desktop_id(self) -> int:
-        verify = self.__check_integrity()
-        if verify: 
-            config_keys = self.__read_config_file(self.config_file)
-            if config_keys is None:
-                PopUp('Desktop ID missed', 'Please, verify your Anydesk installation.')
-                return self.none_id
-            return int(config_keys.get(self.id_key, self.none_id))
+        for path in self.config_candidates:
+            config = self._read_config_file(path)
+            if not config:
+                continue
+            raw_value = config.get(self.id_key)
+            if raw_value is None:
+                continue
+            try:
+                value = int(raw_value)
+            except (TypeError, ValueError):
+                continue
+            diagnostics.record("anydesk_id", value, "file")
+            return value
+
+        diagnostics.warn("No se encontró ad.anynet.id en las rutas de AnyDesk.")
+        diagnostics.record("anydesk_id", self.none_id, "none")
         return self.none_id
