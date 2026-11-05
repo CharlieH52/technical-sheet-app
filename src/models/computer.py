@@ -20,6 +20,8 @@ class Computer:
     device_uuid: str | None = None
     identity_source: str | None = None
     hardware_ids: dict | None = None
+    captured_at: str | None = None
+    remote_id: int | None = None
 
     @property
     def storage_count(self) -> int:
@@ -44,4 +46,5 @@ class Computer:
             'device_uuid': self.device_uuid,
             'identity_source': self.identity_source,
             'hardware_ids': self.hardware_ids,
+            'captured_at': self.captured_at,
         }

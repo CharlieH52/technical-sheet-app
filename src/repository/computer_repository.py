@@ -183,6 +183,7 @@ class ComputerRepositoryLocal:
             device_uuid=computer_data.get("device_uuid"),
             identity_source=computer_data.get("identity_source"),
             hardware_ids=computer_data.get("hardware_ids"),
+            captured_at=computer_data.get("captured_at"),
         )
 
     def create_dimm_ram_list(self, dimm_data: list[dict[str, Any]]) -> list[DimmRam]:
@@ -314,6 +315,7 @@ class ComputerRepositoryLocal:
                 "device_uuid": computer.device_uuid,
                 "identity_source": computer.identity_source,
                 "hardware_ids": computer.hardware_ids,
+                "captured_at": computer.captured_at,
             }
             serialized_computer_list.append(computer_dict)
         return serialized_computer_list

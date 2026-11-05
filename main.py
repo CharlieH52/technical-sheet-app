@@ -110,6 +110,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="muestra la fuente y el valor de cada campo, sin guardar nada",
     )
+    parser.add_argument(
+        "--sync-only",
+        action="store_true",
+        help="solo sincroniza pendientes, sin capturar",
+    )
+    parser.add_argument(
+        "--capture-only",
+        action="store_true",
+        help="captura sin intentar red",
+    )
     return parser.parse_args(argv)
 
 
@@ -163,6 +173,29 @@ def _diagnose(log) -> int:
     return EXIT_OK
 
 
+def _sync_only(args: argparse.Namespace, log) -> int:
+    db_file = sqlite_path()
+    ensure_parent_writable(db_file)
+    sql_repo = ComputerRepositorySQLite(str(db_file))
+    if args.capture_only:
+        return EXIT_OK
+    try:
+        from src.infra.sync import SyncManager
+
+        manager = SyncManager(sql_repo, diagnostics)
+        result = manager.sync_pending()
+        log.info("Sincronización: %s", result)
+        if not args.quiet:
+            PopUp("Aviso", f"Sincronización: {result}")
+    except Exception as exc:  # noqa: BLE001
+        log.exception("Error en sincronización")
+        if not args.quiet:
+            PopUpError("Error de sincronización", str(exc))
+    finally:
+        sql_repo.close()
+    return EXIT_OK
+
+
 def _run(args: argparse.Namespace, log) -> int:
     # ------------------------------------------------------------------
     # PASO 1: Cargar registros existentes desde JSON (legacy)
@@ -175,6 +208,10 @@ def _run(args: argparse.Namespace, log) -> int:
     # ------------------------------------------------------------------
     diagnostics.clear()
     new_computer = _build_computer()
+
+    from datetime import datetime, timezone
+
+    new_computer.captured_at = datetime.now(timezone.utc).isoformat()
 
     # ------------------------------------------------------------------
     # PASO 3: Actualizar/insertar en JSON local (legacy)
@@ -195,6 +232,17 @@ def _run(args: argparse.Namespace, log) -> int:
     sql_repo.find_and_update_by_mac(new_computer)
     log.info("Ficha guardada en SQLite: %s", db_file)
 
+    # Sincronización (si está habilitada y no se pidió capturar solo).
+    if not args.capture_only:
+        try:
+            from src.infra.sync import SyncManager
+
+            manager = SyncManager(sql_repo, diagnostics)
+            result = manager.sync_pending()
+            log.info("Sincronización: %s", result)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Sincronización omitida: %s", exc)
+
     # ------------------------------------------------------------------
     # PASO 5: Enviar a MySQL remoto solo si está habilitado (legacy)
     # ------------------------------------------------------------------
@@ -211,6 +259,7 @@ def _run(args: argparse.Namespace, log) -> int:
     # PASO 6: Notificación final al usuario
     # ------------------------------------------------------------------
     log.info("Inventario completado para %s", new_computer.device_name)
+    sql_repo.close()
     if not args.quiet:
         PopUp("Aviso", "¡Ficha guardada correctamente!")
 
@@ -244,6 +293,8 @@ def main(argv: list[str] | None = None) -> int:
         log.info("Inicio de la aplicación (log: %s)", log_file)
         if args.diagnose:
             return _diagnose(log)
+        if args.sync_only:
+            return _sync_only(args, log)
         return _run(args, log)
     except PortablePathError as exc:
         if not args.quiet:

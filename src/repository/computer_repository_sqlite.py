@@ -203,7 +203,20 @@ class ComputerRepositorySQLite:
                     conn.execute("ALTER TABLE computers ADD COLUMN identity_source TEXT;")
                 if "hardware_ids" not in columns:
                     conn.execute("ALTER TABLE computers ADD COLUMN hardware_ids TEXT;")
-                conn.execute("PRAGMA user_version = 3;")
+                # Columnas de sincronización con la API.
+                if "sync_status" not in columns:
+                    conn.execute("ALTER TABLE computers ADD COLUMN sync_status TEXT DEFAULT 'pending';")
+                if "remote_id" not in columns:
+                    conn.execute("ALTER TABLE computers ADD COLUMN remote_id INTEGER;")
+                if "captured_at" not in columns:
+                    conn.execute("ALTER TABLE computers ADD COLUMN captured_at TEXT;")
+                if "sync_error" not in columns:
+                    conn.execute("ALTER TABLE computers ADD COLUMN sync_error TEXT;")
+                if "sync_attempts" not in columns:
+                    conn.execute("ALTER TABLE computers ADD COLUMN sync_attempts INTEGER DEFAULT 0;")
+                if "last_sync_at" not in columns:
+                    conn.execute("ALTER TABLE computers ADD COLUMN last_sync_at TEXT;")
+                conn.execute("PRAGMA user_version = 4;")
                 conn.commit()
         except sqlite3.Error as exc:
             logger.error("No se pudo migrar el esquema de identidad: %s", exc)
@@ -231,6 +244,11 @@ class ComputerRepositorySQLite:
         except (KeyError, IndexError):
             pass
 
+        try:
+            captured_at = row["captured_at"]
+        except (KeyError, IndexError):
+            captured_at = None
+
         return Computer(
             device_name=row["device_name"],
             user_name=row["user_name"],
@@ -248,6 +266,7 @@ class ComputerRepositorySQLite:
             device_uuid=device_uuid,
             identity_source=identity_source,
             hardware_ids=hardware_ids,
+            captured_at=captured_at,
         )
 
     def _row_to_storage_drive(self, row: sqlite3.Row) -> StorageDrive:
@@ -304,6 +323,7 @@ class ComputerRepositorySQLite:
             computer.device_uuid,
             computer.identity_source,
             hardware_ids,
+            computer.captured_at,
         )
 
     def _dimm_ram_to_tuple(self, dimm: DimmRam, machine_mac: str) -> tuple:
@@ -349,8 +369,9 @@ class ComputerRepositorySQLite:
             machine_mac, device_name, user_name, machine_ip,
             mobo_mark, mobo_model, cpu_info, operative_system,
             storage_model, storage_cap, anydesk_id,
-            device_uuid, identity_source, hardware_ids
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            device_uuid, identity_source, hardware_ids,
+            captured_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
 
         insert_dimm = """
@@ -444,7 +465,8 @@ class ComputerRepositorySQLite:
             anydesk_id = ?,
             device_uuid = ?,
             identity_source = ?,
-            hardware_ids = ?
+            hardware_ids = ?,
+            captured_at = ?
         WHERE machine_mac = ?;
         """
 
@@ -473,6 +495,7 @@ class ComputerRepositorySQLite:
                 __import__("json").dumps(computer.hardware_ids, ensure_ascii=False)
                 if computer.hardware_ids is not None
                 else None,
+                computer.captured_at,
                 computer.machine_mac,
             ))
 
@@ -536,6 +559,46 @@ class ComputerRepositorySQLite:
             self.update(new_registry)
 
         return self.read_all()
+
+    def read_pending_sync(self, limit: int = 50) -> list[Computer]:
+        """Devuelve equipos cuyo sync_status no es 'synced'."""
+        with self._get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM computers WHERE COALESCE(sync_status,'pending') <> 'synced' "
+                "ORDER BY captured_at ASC LIMIT ?;",
+                (limit,),
+            ).fetchall()
+            result: list[Computer] = []
+            for row in rows:
+                mac = row["machine_mac"]
+                dimm_cursor = conn.execute(
+                    "SELECT * FROM dimm_ram WHERE machine_mac = ?;", (mac,)
+                )
+                dimm_list = [self._row_to_dimm_ram(d) for d in dimm_cursor.fetchall()]
+                storage_cursor = conn.execute(
+                    "SELECT * FROM storage_drive WHERE machine_mac = ?;", (mac,)
+                )
+                storage_list = [self._row_to_storage_drive(s) for s in storage_cursor.fetchall()]
+                result.append(self._row_to_computer(row, dimm_list, storage_list))
+                result[-1].remote_id = row["remote_id"] if "remote_id" in row.keys() else None
+            return result
+
+    def mark_sync_result(
+        self,
+        machine_mac: str,
+        status: str,
+        remote_id: int | None = None,
+        error: str | None = None,
+        captured_at: str | None = None,
+    ) -> None:
+        with self._get_connection() as conn:
+            conn.execute(
+                "UPDATE computers SET sync_status=?, remote_id=COALESCE(?,remote_id), "
+                "sync_error=?, sync_attempts=sync_attempts+1, last_sync_at=?, "
+                "captured_at=COALESCE(?,captured_at) WHERE machine_mac=?;",
+                (status, remote_id, error, captured_at, captured_at, machine_mac),
+            )
+            conn.commit()
 
     def close(self) -> None:
         """Cierra cualquier recurso pendiente (SQLite cierra automáticamente con 'with')."""
