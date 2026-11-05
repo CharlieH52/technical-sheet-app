@@ -40,10 +40,9 @@ El archivo .env debe ubicarse en la raíz del proyecto y contener:
 
 import os
 from typing import Any
-from dotenv import load_dotenv
 
-# Cargar variables de entorno desde .env antes de cualquier otra operación
-load_dotenv()
+# Las variables de entorno ya las carga main.py desde el .env portátil.
+# No se llama a load_dotenv() aquí para no leer el .env del directorio actual.
 
 try:
     import mysql.connector

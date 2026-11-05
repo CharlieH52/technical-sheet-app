@@ -28,16 +28,18 @@
   • Si la cantidad de módulos RAM cambia entre lecturas, se muestra una
     advertencia al usuario mediante PopUpWarning.
   • Los errores de permisos o lectura/escritura se manejan con PopUpError
-    y se registran en error_logs.txt si el mensaje supera 100 caracteres.
+    y se registran en ``{APP_DIR}\\logs\\app.log``.
 
 ================================================================================
 """
 
 import os
 import json
+from pathlib import Path
 from typing import Any
 from socket import gethostname
 
+from src.infra.paths import data_dir, ensure_writable_dir
 from src.notifications.popup import PopUp, PopUpError, PopUpWarning, ErrorLogger
 from src.models.computer import Computer
 from src.models.ram import DimmRam
@@ -58,15 +60,22 @@ class ComputerRepositoryLocal:
         STORAGE_FILE: Ruta completa al archivo JSON.
     """
 
-    def __init__(self):
+    def __init__(self, storage_file: str | Path | None = None):
         """
         Inicializa el repositorio configurando rutas y verificando
         la existencia del archivo de almacenamiento JSON.
+
+        Args:
+            storage_file: Ruta explícita del JSON. Si es None, usa la ruta
+                portátil ``{APP_DIR}\\data\\localStorage.json``.
         """
-        self.WORKING_PATH = os.getcwd()
+        if storage_file is None:
+            storage_file = ensure_writable_dir(data_dir()) / "localStorage.json"
+
+        self.STORAGE_FILE = str(Path(storage_file).resolve())
+        self.WORKING_PATH = str(Path(self.STORAGE_FILE).parent)
         self.COMPUTER_NAME = gethostname()
-        self.FILE_NAME = "localStorage.json"
-        self.STORAGE_FILE = os.path.join(self.WORKING_PATH, self.FILE_NAME)
+        self.FILE_NAME = Path(self.STORAGE_FILE).name
         self.check_local_storage()
 
     # ------------------------------------------------------------------

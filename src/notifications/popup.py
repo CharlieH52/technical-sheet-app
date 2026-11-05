@@ -12,37 +12,41 @@
   Comportamiento especial de PopUp / PopUpWarning / PopUpError:
   ──────────────────────────────────────────────────────────────
   Si el content_message supera los 64 caracteres, el texto completo se
-  guarda automáticamente en un archivo .log en el directorio de trabajo
-  (error_logs.txt) y al usuario se le presenta un resumen junto con la
-  ruta del archivo generado.
+  guarda automáticamente en ``{APP_DIR}\\logs\\app.log`` y al usuario se le
+  presenta un resumen junto con la ruta del archivo generado.
 
 ================================================================================
 """
 
 import os
-import datetime
 from tkinter import messagebox, Tk
+
+from src.infra import logging as app_logging
 
 
 class ErrorLogger:
     """
-    Gestor de archivos de log para mensajes de error extensos.
+    Fachada de compatibilidad sobre el logging unificado de la aplicación.
 
-    Escribe entradas con marca de tiempo en un archivo de texto plano
-    ubicado en el directorio de trabajo actual.
+    Conserva la API ``log(title, message) -> ruta`` que usaban los PopUp,
+    pero delega en :mod:`src.infra.logging` y escribe en ``{APP_DIR}\\logs``.
     """
 
-    LOG_FILE_NAME: str = "error_logs.txt"
+    LOG_FILE_NAME: str = "app.log"
 
     @classmethod
     def _get_log_path(cls) -> str:
-        """Retorna la ruta absoluta al archivo de log."""
-        return os.path.join(os.getcwd(), cls.LOG_FILE_NAME)
+        """Retorna la ruta absoluta del log activo."""
+        try:
+            return str(app_logging.current_log_path())
+        except Exception:
+            # El logging nunca debe romper un aviso al usuario.
+            return os.path.join(os.path.dirname(os.path.abspath(__file__)), cls.LOG_FILE_NAME)
 
     @classmethod
     def log(cls, title: str, message: str) -> str:
         """
-        Escribe una entrada de error en el archivo de log.
+        Escribe una entrada de error en el log rotado de la aplicación.
 
         Args:
             title: Título o categoría del error.
@@ -51,27 +55,19 @@ class ErrorLogger:
         Returns:
             Ruta absoluta del archivo de log donde se escribió la entrada.
         """
-        log_path = cls._get_log_path()
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        separator = "=" * 60
-
-        entry = (
-            f"[{timestamp}]  TÍTULO: {title}"
-            f"[{timestamp}]  MENSAJE: {message}"
-            f"{separator}"
-        )
-
-        with open(log_path, "a", encoding="utf-8") as file:
-            file.write(entry)
-
-        return log_path
+        try:
+            app_logging.get_logger("notifications").error("%s\n%s", title, message)
+            return cls._get_log_path()
+        except Exception:
+            return cls._get_log_path()
 
     @classmethod
     def clear_logs(cls) -> None:
-        """Elimina el archivo de log si existe."""
-        log_path = cls._get_log_path()
-        if os.path.exists(log_path):
-            os.remove(log_path)
+        """Elimina ``app.log`` y sus rotaciones."""
+        try:
+            app_logging.clear_log_files()
+        except Exception:
+            pass
 
 
 class _BasePopUp:
@@ -105,10 +101,9 @@ class _BasePopUp:
         summary = self.content_message[:self.MAX_MESSAGE_LENGTH] + "..."
 
         full_notification = (
-            f"{summary}"
-            f"El mensaje completo es demasiado extenso para mostrarlo aquí."
-            f"Se ha guardado un registro detallado en:"
-            f"{log_path}"
+            f"{summary}\n\n"
+            f"El mensaje completo es demasiado extenso para mostrarlo aquí.\n"
+            f"Se ha guardado un registro detallado en:\n{log_path}"
         )
 
         self._show(self.window_title, full_notification)

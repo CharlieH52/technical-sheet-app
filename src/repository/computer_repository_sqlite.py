@@ -1,9 +1,10 @@
 import sqlite3
-import os
+from pathlib import Path
 from typing import Any
 from src.models.computer import Computer
 from src.models.ram import DimmRam
-from src.notifications.popup import PopUp, PopUpError, PopUpWarning, ErrorLogger
+from src.infra.logging import get_logger
+from src.notifications.popup import PopUpWarning
 
 
 class ComputerRepositorySQLite:
@@ -14,15 +15,27 @@ class ComputerRepositorySQLite:
     usando machine_mac como clave primaria/foránea.
     """
 
-    def __init__(self, db_path: str | None = None):
+    def __init__(self, db_path: str | Path | None = None):
         """
         Inicializa el repositorio SQLite.
 
         Args:
-            db_path: Ruta al archivo .db. Si es None, usa 'localStorage.db' en el directorio actual.
+            db_path: Ruta al archivo .db. Si es None, usa la ruta portátil
+                ``{APP_DIR}\\data\\localStorage.db`` (ver src.infra.paths).
         """
-        self.WORKING_PATH = os.getcwd()
-        self.DB_NAME = db_path or os.path.join(self.WORKING_PATH, "localStorage.db")
+        if db_path is None:
+            from src.infra.paths import sqlite_path
+
+            db_path = sqlite_path()
+
+        self.DB_NAME = str(db_path)
+        self.WORKING_PATH = str(Path(self.DB_NAME).resolve().parent)
+
+        # La BD debe poder crearse junto al ejecutable; si no, error claro
+        # en lugar de una excepción opaca de sqlite3.
+        from src.infra.paths import ensure_parent_writable
+
+        ensure_parent_writable(Path(self.DB_NAME))
         self._init_database()
 
     def _get_connection(self) -> sqlite3.Connection:
@@ -81,7 +94,11 @@ class ComputerRepositorySQLite:
                 conn.execute(create_index)
                 conn.commit()
         except sqlite3.Error as e:
-            PopUpError("Error de Base de Datos", f"No se pudo inicializar SQLite: {e}")
+            # La capa de datos no muestra diálogos: registra y deja que main
+            # decida cómo informar (--quiet no debe abrir ventanas).
+            get_logger("repository.sqlite").error(
+                "No se pudo inicializar SQLite en %s: %s", self.DB_NAME, e
+            )
             raise
 
     # ------------------------------------------------------------------

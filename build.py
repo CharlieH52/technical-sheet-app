@@ -1,31 +1,39 @@
+import shutil
 import subprocess
-import os
+import sys
+from pathlib import Path
 
 script_name = "main.py"
 output_name = "GENERATE_TECH-SHEET"
 
 
-def build():
+def build() -> None:
     command_sequence = [
-        "pyinstaller",
+        sys.executable,
+        "-m",
+        "PyInstaller",
         "--windowed",
         "--onefile",
+        "--noconfirm",
         f"--name={output_name}",
         "--clean",
-        script_name
+        script_name,
     ]
-    
-    subprocess.run(command_sequence)
+    subprocess.run(command_sequence, check=True)
 
-def clean():
-    for folder in ["build", "__pycache__"]:
-        if os.path.exists(folder):
+
+def clean() -> None:
+    for folder in ("build", "__pycache__"):
+        path = Path(folder)
+        if path.exists():
             print(f"Eliminando carpeta: {folder}")
-            subprocess.run(["rm", "-rf", folder], shell=True)
+            shutil.rmtree(path, ignore_errors=True)
 
-    if os.path.exists("main.spec"):
+    spec = Path("main.spec")
+    if spec.exists():
         print("Eliminando archivo: main.spec")
-        os.remove("main.spec")
+        spec.unlink()
+
 
 if __name__ == "__main__":
     clean()
