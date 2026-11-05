@@ -179,7 +179,10 @@ class ComputerRepositoryLocal:
             storage_cap=computer_data.get("storage_cap"),
             anydesk_id=computer_data.get("anydesk_id"),
             dimm_list=obj_dimm_list,
-            storage_list=self.create_storage_drive_list(computer_data.get("storage_list") or [])
+            storage_list=self.create_storage_drive_list(computer_data.get("storage_list") or []),
+            device_uuid=computer_data.get("device_uuid"),
+            identity_source=computer_data.get("identity_source"),
+            hardware_ids=computer_data.get("hardware_ids"),
         )
 
     def create_dimm_ram_list(self, dimm_data: list[dict[str, Any]]) -> list[DimmRam]:
@@ -308,6 +311,9 @@ class ComputerRepositoryLocal:
                 "storage_cap": computer.storage_cap,
                 "dimm_list": dimm_serialized_list,
                 "storage_list": [drive.to_dictionary() for drive in computer.storage_list],
+                "device_uuid": computer.device_uuid,
+                "identity_source": computer.identity_source,
+                "hardware_ids": computer.hardware_ids,
             }
             serialized_computer_list.append(computer_dict)
         return serialized_computer_list

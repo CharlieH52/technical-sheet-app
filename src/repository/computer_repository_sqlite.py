@@ -138,6 +138,8 @@ class ComputerRepositorySQLite:
                 conn.execute("PRAGMA user_version = 2;")
                 conn.commit()
             self._migrate_legacy_macs()
+            self._migrate_schema()
+            self._migrate_schema()
         except sqlite3.Error as e:
             # La capa de datos no muestra diálogos: registra y deja que main
             # decida cómo informar (--quiet no debe abrir ventanas).
@@ -189,8 +191,46 @@ class ComputerRepositorySQLite:
     # ------------------------------------------------------------------
     # ------------------------------------------------------------------
 
+    def _migrate_schema(self) -> None:
+        """Añade columnas de identidad si la BD es antigua."""
+        logger = get_logger("repository.sqlite")
+        try:
+            with self._get_connection() as conn:
+                columns = {row["name"] for row in conn.execute("PRAGMA table_info(computers)").fetchall()}
+                if "device_uuid" not in columns:
+                    conn.execute("ALTER TABLE computers ADD COLUMN device_uuid TEXT;")
+                if "identity_source" not in columns:
+                    conn.execute("ALTER TABLE computers ADD COLUMN identity_source TEXT;")
+                if "hardware_ids" not in columns:
+                    conn.execute("ALTER TABLE computers ADD COLUMN hardware_ids TEXT;")
+                conn.execute("PRAGMA user_version = 3;")
+                conn.commit()
+        except sqlite3.Error as exc:
+            logger.error("No se pudo migrar el esquema de identidad: %s", exc)
+
     def _row_to_computer(self, row: sqlite3.Row, dimm_list: list[DimmRam], storage_list: list[StorageDrive] | None = None) -> Computer:
-        """Convierte una fila de SQLite + listas en un objeto Computer."""
+        hardware_ids = None
+        raw_ids = None
+        try:
+            raw_ids = row["hardware_ids"]
+        except (KeyError, IndexError):
+            raw_ids = None
+        if raw_ids:
+            try:
+                import json
+
+                hardware_ids = json.loads(raw_ids)
+            except (ValueError, TypeError):
+                hardware_ids = None
+
+        device_uuid = None
+        identity_source = None
+        try:
+            device_uuid = row["device_uuid"]
+            identity_source = row["identity_source"]
+        except (KeyError, IndexError):
+            pass
+
         return Computer(
             device_name=row["device_name"],
             user_name=row["user_name"],
@@ -205,6 +245,9 @@ class ComputerRepositorySQLite:
             anydesk_id=row["anydesk_id"],
             dimm_list=dimm_list,
             storage_list=storage_list or [],
+            device_uuid=device_uuid,
+            identity_source=identity_source,
+            hardware_ids=hardware_ids,
         )
 
     def _row_to_storage_drive(self, row: sqlite3.Row) -> StorageDrive:
@@ -239,6 +282,13 @@ class ComputerRepositorySQLite:
 
     def _computer_to_tuple(self, computer: Computer) -> tuple:
         """Serializa un Computer a tupla para INSERT/UPDATE."""
+        import json
+
+        hardware_ids = (
+            json.dumps(computer.hardware_ids, ensure_ascii=False)
+            if computer.hardware_ids is not None
+            else None
+        )
         return (
             computer.machine_mac,
             computer.device_name,
@@ -250,7 +300,10 @@ class ComputerRepositorySQLite:
             computer.operative_system,
             computer.storage_model,
             computer.storage_cap,
-            computer.anydesk_id
+            computer.anydesk_id,
+            computer.device_uuid,
+            computer.identity_source,
+            hardware_ids,
         )
 
     def _dimm_ram_to_tuple(self, dimm: DimmRam, machine_mac: str) -> tuple:
@@ -295,8 +348,9 @@ class ComputerRepositorySQLite:
         INSERT INTO computers (
             machine_mac, device_name, user_name, machine_ip,
             mobo_mark, mobo_model, cpu_info, operative_system,
-            storage_model, storage_cap, anydesk_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            storage_model, storage_cap, anydesk_id,
+            device_uuid, identity_source, hardware_ids
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
 
         insert_dimm = """
@@ -387,7 +441,10 @@ class ComputerRepositorySQLite:
             operative_system = ?,
             storage_model = ?,
             storage_cap = ?,
-            anydesk_id = ?
+            anydesk_id = ?,
+            device_uuid = ?,
+            identity_source = ?,
+            hardware_ids = ?
         WHERE machine_mac = ?;
         """
 
@@ -411,7 +468,12 @@ class ComputerRepositorySQLite:
                 computer.storage_model,
                 computer.storage_cap,
                 computer.anydesk_id,
-                computer.machine_mac
+                computer.device_uuid,
+                computer.identity_source,
+                __import__("json").dumps(computer.hardware_ids, ensure_ascii=False)
+                if computer.hardware_ids is not None
+                else None,
+                computer.machine_mac,
             ))
 
             # Reemplazar módulos RAM (borrar e insertar)

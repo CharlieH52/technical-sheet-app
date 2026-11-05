@@ -110,13 +110,45 @@ def _msft_enrichment() -> dict[str, tuple[int | None, int | None]]:
     return result
 
 
-def collect_storage_drives(system_drive: str | None = None) -> list[StorageDrive]:
+def collect_memory_modules() -> list[dict]:
+    """Devuelve los módulos RAM como lista de diccionarios (compatibles con DimmRam)."""
+    result = []
+    try:
+        import win32com.client
+
+        locator = win32com.client.Dispatch("WbemScripting.SWbemLocator")
+        svc = locator.ConnectServer(".", "root\\cimv2")
+        for mem in svc.ExecQuery(
+            "SELECT Caption, Manufacturer, PartNumber, Model, Tag, BankLabel, "
+            "Capacity, Speed, ConfiguredClockSpeed, ConfiguredVoltage, DeviceLocator "
+            "FROM Win32_PhysicalMemory"
+        ):
+            result.append(
+                {
+                    "Caption": getattr(mem, "Caption", None),
+                    "Manufacturer": getattr(mem, "Manufacturer", None),
+                    "PartNumber": getattr(mem, "PartNumber", None),
+                    "Model": getattr(mem, "Model", None),
+                    "Tag": getattr(mem, "Tag", None),
+                    "BankLabel": getattr(mem, "BankLabel", None),
+                    "Capacity": getattr(mem, "Capacity", None),
+                    "Speed": getattr(mem, "Speed", None),
+                    "ConfiguredClockSpeed": getattr(mem, "ConfiguredClockSpeed", None),
+                    "ConfiguredVoltage": getattr(mem, "ConfiguredVoltage", None),
+                    "DeviceLocator": getattr(mem, "DeviceLocator", None),
+                }
+            )
+    except Exception:  # noqa: BLE001
+        return result
+    return result
     """Devuelve la lista de discos físicos con sus letras y rol de sistema."""
     try:
         import win32com.client
     except ImportError:
         return []
 
+def collect_storage_drives(system_drive: str | None = None) -> list[StorageDrive]:
+    """Devuelve la lista de discos físicos con sus letras y rol de sistema."""
     if system_drive is None:
         system_drive = os.getenv("SystemDrive", "C:")
     system_drive = system_drive.strip().rstrip("\\/").upper()

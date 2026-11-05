@@ -17,12 +17,15 @@ class Computer:
     anydesk_id: int | None
     dimm_list: list[DimmRam]
     storage_list: list[StorageDrive] = field(default_factory=list)
+    device_uuid: str | None = None
+    identity_source: str | None = None
+    hardware_ids: dict | None = None
 
     @property
     def storage_count(self) -> int:
         return len(self.storage_list)
 
-    def to_dictionary(self) -> dict[str, str | int | list | None]:
+    def to_dictionary(self) -> dict[str, str | int | list | None | dict]:
         return {
             'anydesk_id': self.anydesk_id,
             'device_name': self.device_name,
@@ -38,4 +41,7 @@ class Computer:
             'dimm_list': [dimm_obj.to_dictionary() for dimm_obj in self.dimm_list],
             'storage_list': [drive.to_dictionary() for drive in self.storage_list],
             'storage_count': self.storage_count,
+            'device_uuid': self.device_uuid,
+            'identity_source': self.identity_source,
+            'hardware_ids': self.hardware_ids,
         }

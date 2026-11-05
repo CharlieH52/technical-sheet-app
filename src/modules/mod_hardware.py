@@ -12,7 +12,7 @@ from src.infra.diagnostics import diagnostics
 from src.infra.diskinfo import read_system_disk, system_drive
 from src.infra.hardware_registry import read_cpu_name, read_motherboard
 from src.infra.units import bytes_to_gib
-from src.infra.wmi import collect_storage_drives
+from src.infra.wmi import collect_memory_modules, collect_storage_drives
 from src.models.ram import DimmRam
 from src.models.storage import StorageDrive
 
@@ -85,17 +85,9 @@ class HardwareInfo:
             "Size": system_drive_obj.size_bytes if system_drive_obj else None,
         }
 
-        # RAM vía PowerShell (pendiente de migrar a WMI COM).
-        self.class_physicalmemory = [
-            "powershell",
-            "get-ciminstance",
-            '-class Win32_PhysicalMemory | Select-Object Caption, Manufacturer, PartNumber, Model, Tag, BankLabel, Capacity, Speed, ConfiguredClockSpeed, ConfiguredVoltage, DeviceLocator | ConvertTo-Json',
-        ]
-        self.physicalmemory = []
-        try:
-            self.physicalmemory = CommandProcessor(self.class_physicalmemory).get_from_json()
-        except Exception as exc:  # noqa: BLE001
-            diagnostics.warn(f"Win32_PhysicalMemory no disponible: {exc}")
+        # RAM vía WMI COM.
+        self.physicalmemory = collect_memory_modules()
+        diagnostics.record("ram_modules", len(self.physicalmemory), "wmi")
 
     # List dimm RAM
     def create_ram_objects(self) -> list[DimmRam]:

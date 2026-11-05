@@ -1,3 +1,4 @@
+from src.infra.identity import resolve_identity
 from src.models.computer import Computer
 from platform import node
 
@@ -11,6 +12,7 @@ class ComputerBuilder:
         self.user = user_provider
     
     def create_computer(self) -> Computer:
+        identity = resolve_identity()
         return Computer(
             device_name = node(),
             user_name = self.user.get_domain_name(),
@@ -24,5 +26,8 @@ class ComputerBuilder:
             storage_cap= self.hardware.get_disk_cap(),
             anydesk_id = self.anydesk.get_anydesk_desktop_id(),
             dimm_list = self.hardware.create_ram_objects(),
-            storage_list = self.hardware.get_storage_list()
+            storage_list = self.hardware.get_storage_list(),
+            device_uuid = identity[0],
+            identity_source = identity[1],
+            hardware_ids = identity[2],
             )
