@@ -28,19 +28,28 @@
   • Si la cantidad de módulos RAM cambia entre lecturas, se muestra una
     advertencia al usuario mediante PopUpWarning.
   • Los errores de permisos o lectura/escritura se manejan con PopUpError
-    y se registran en error_logs.txt si el mensaje supera 100 caracteres.
+    y se registran en ``{APP_DIR}\\logs\\app.log``.
 
 ================================================================================
 """
 
 import os
 import json
+from pathlib import Path
 from typing import Any
 from socket import gethostname
 
+from src.infra.paths import data_dir, ensure_writable_dir
+
+try:
+    from src.infra.netinfo import normalize_mac
+except ImportError:  # pragma: no cover
+    def normalize_mac(value):
+        return value
 from src.notifications.popup import PopUp, PopUpError, PopUpWarning, ErrorLogger
 from src.models.computer import Computer
 from src.models.ram import DimmRam
+from src.models.storage import StorageDrive
 
 
 class ComputerRepositoryLocal:
@@ -58,15 +67,22 @@ class ComputerRepositoryLocal:
         STORAGE_FILE: Ruta completa al archivo JSON.
     """
 
-    def __init__(self):
+    def __init__(self, storage_file: str | Path | None = None):
         """
         Inicializa el repositorio configurando rutas y verificando
         la existencia del archivo de almacenamiento JSON.
+
+        Args:
+            storage_file: Ruta explícita del JSON. Si es None, usa la ruta
+                portátil ``{APP_DIR}\\data\\localStorage.json``.
         """
-        self.WORKING_PATH = os.getcwd()
+        if storage_file is None:
+            storage_file = ensure_writable_dir(data_dir()) / "localStorage.json"
+
+        self.STORAGE_FILE = str(Path(storage_file).resolve())
+        self.WORKING_PATH = str(Path(self.STORAGE_FILE).parent)
         self.COMPUTER_NAME = gethostname()
-        self.FILE_NAME = "localStorage.json"
-        self.STORAGE_FILE = os.path.join(self.WORKING_PATH, self.FILE_NAME)
+        self.FILE_NAME = Path(self.STORAGE_FILE).name
         self.check_local_storage()
 
     # ------------------------------------------------------------------
@@ -162,7 +178,12 @@ class ComputerRepositoryLocal:
             storage_model=computer_data.get("storage_model"),
             storage_cap=computer_data.get("storage_cap"),
             anydesk_id=computer_data.get("anydesk_id"),
-            dimm_list=obj_dimm_list
+            dimm_list=obj_dimm_list,
+            storage_list=self.create_storage_drive_list(computer_data.get("storage_list") or []),
+            device_uuid=computer_data.get("device_uuid"),
+            identity_source=computer_data.get("identity_source"),
+            hardware_ids=computer_data.get("hardware_ids"),
+            captured_at=computer_data.get("captured_at"),
         )
 
     def create_dimm_ram_list(self, dimm_data: list[dict[str, Any]]) -> list[DimmRam]:
@@ -198,6 +219,26 @@ class ComputerRepositoryLocal:
             )
             obj_dimm_list.append(dimm_object)
         return obj_dimm_list
+
+    def create_storage_drive_list(self, storage_data: list[dict[str, Any]]) -> list[StorageDrive]:
+        obj_list: list[StorageDrive] = []
+        for item in storage_data or []:
+            if not isinstance(item, dict):
+                continue
+            obj_list.append(
+                StorageDrive(
+                    device_id=item.get("device_id"),
+                    model=item.get("model"),
+                    serial_number=item.get("serial_number"),
+                    size_bytes=item.get("size_bytes"),
+                    interface_type=item.get("interface_type"),
+                    media_type=item.get("media_type"),
+                    partitions=item.get("partitions"),
+                    drive_letters=list(item.get("drive_letters") or []),
+                    is_system=bool(item.get("is_system")),
+                )
+            )
+        return obj_list
 
     def create_computer_list(self) -> list[Computer]:
         """
@@ -269,7 +310,12 @@ class ComputerRepositoryLocal:
                 "operative_system": computer.operative_system,
                 "storage_model": computer.storage_model,
                 "storage_cap": computer.storage_cap,
-                "dimm_list": dimm_serialized_list
+                "dimm_list": dimm_serialized_list,
+                "storage_list": [drive.to_dictionary() for drive in computer.storage_list],
+                "device_uuid": computer.device_uuid,
+                "identity_source": computer.identity_source,
+                "hardware_ids": computer.hardware_ids,
+                "captured_at": computer.captured_at,
             }
             serialized_computer_list.append(computer_dict)
         return serialized_computer_list
@@ -421,10 +467,13 @@ class ComputerRepositoryLocal:
             Lista actualizada de objetos Computer lista para ser guardada.
         """
         for computer in current_records:
-            if computer.machine_mac != new_registry.machine_mac:
+            if normalize_mac(computer.machine_mac) != normalize_mac(
+                new_registry.machine_mac
+            ):
                 continue
 
             # MAC coincidente encontrada: actualizar registro existente.
+            computer.machine_mac = new_registry.machine_mac
             computer.dimm_list = self.update_dimm_list(
                 computer.dimm_list,
                 new_registry.dimm_list

@@ -4,125 +4,253 @@
 ================================================================================
 
 FLUJO DE EJECUCIÓN:
-  1. Recolecta información del equipo actual (hardware, red, SO, usuario, AnyDesk).
+
+  0. Toma el mutex de instancia única y carga el ``.env`` que viaja con la app.
+  1. Recolecta información del equipo actual (hardware, red, SO, usuario,
+     AnyDesk).
   2. Construye un objeto Computer con todos los datos.
-  3. Persiste el registro en la base de datos configurada:
+  3. Persiste el registro en la base de datos local portátil:
      a) JSON local (legacy)  → ComputerRepositoryLocal
      b) SQLite local         → ComputerRepositorySQLite
-     c) MySQL remoto         → ComputerRepositoryMySQL (condicional)
+     c) MySQL remoto         → ComputerRepositoryMySQL (solo con
+        USE_MYSQL_REMOTE=true)
 
-CONFIGURACIÓN MEDIANTE VARIABLES DE ENTORNO (.env)
---------------------------------------------------
-  # Obligatorias para MySQL remoto (si se habilita)
-  MYSQL_HOST=mi-servidor-mysql.ejemplo.com
-  MYSQL_PORT=3306
-  MYSQL_USER=mi_usuario
-  MYSQL_PASSWORD=mi_contraseña_segura
-  MYSQL_DATABASE=inventario_db
+PORTABILIDAD
+------------
+La aplicación puede ejecutarse desde un pendrive. La base de datos, los logs y
+el ``.env`` viven junto al ejecutable:
 
-  # Opcionales
-  MYSQL_POOL_SIZE=5
-  MYSQL_SSL_CA=/ruta/ca.pem
+  {APP_DIR}\\data\\localStorage.db
+  {APP_DIR}\\logs\\app.log
+  {APP_DIR}\\.env
 
-  # Variable DEDICADA para activar/desactivar envío remoto a MySQL
-  USE_MYSQL_REMOTE=false    # "true"  → envía datos al servidor MySQL remoto
-                            # "false" → solo usa SQLite local (default)
+No se escribe nada en ``%LOCALAPPDATA%`` ni en el directorio de trabajo actual.
 
-================================================================================
-  NOTA IMPORTANTE SOBRE MIGRACIÓN DE PERSISTENCIA
-================================================================================
+VARIABLES DE ENTORNO RELEVANTES
+-------------------------------
+  APP_DIR=                  Carpeta base (vacío = carpeta del ejecutable)
+  SQLITE_PATH=              Ruta explícita de la BD (vacío = {APP_DIR}\\data)
+  LOG_DIR=                  Carpeta de logs (vacío = {APP_DIR}\\logs)
+  LOG_LEVEL=INFO
+  USE_MYSQL_REMOTE=false    "true" activa el envío directo a MySQL (legacy)
+  SINGLE_INSTANCE_SCOPE=local
+  SINGLE_INSTANCE_STRICT=false
+  PORTABLE_STRICT=false     true = abortar si los logs no caben en {APP_DIR}
 
-Para dejar de trabajar "en crudo" con JSON y migrar completamente a bases
-relacionales, realiza los siguientes pasos:
+USO
+---
+  GENERATE_TECH-SHEET.exe
+  GENERATE_TECH-SHEET.exe --allow-multiple   (diagnóstico; omite el mutex)
+  GENERATE_TECH-SHEET.exe --quiet            (sin diálogos ni consola)
+  GENERATE_TECH-SHEET.exe --verbose          (logging DEBUG)
+  GENERATE_TECH-SHEET.exe --diagnose         (fuente y valor de cada campo)
 
-  1. Comenta o elimina las líneas marcadas con [LEGACY-JSON] en este archivo.
-  2. Asegúrate de que ComputerRepositorySQLite esté activo (ya lo está por defecto).
-  3. (Opcional) Si deseas sincronización remota, define USE_MYSQL_REMOTE=true
-     y configura las variables MYSQL_* correspondientes.
-  4. Elimina el archivo localStorage.json cuando ya no lo necesites.
-
-Ejemplo de .env mínimo (solo local):
-  USE_MYSQL_REMOTE=false
-
-Ejemplo de .env con sincronización remota:
-  USE_MYSQL_REMOTE=true
-  MYSQL_HOST=192.168.1.50
-  MYSQL_PORT=3306
-  MYSQL_USER=admin
-  MYSQL_PASSWORD=SuperSecret123!
-  MYSQL_DATABASE=computers_inventory
 ================================================================================
 """
 
+import argparse
+import json
 import os
+import sys
+
 from dotenv import load_dotenv
 
-# Cargar variables de entorno desde .env
-load_dotenv()
-
+from src.computer_builder import ComputerBuilder
+from src.infra.diagnostics import diagnostics
+from src.infra.logging import configure_logging, get_logger
+from src.infra.paths import (
+    PortablePathError,
+    ensure_parent_writable,
+    env_file,
+    migrate_legacy_sqlite,
+    sqlite_path,
+)
+from src.infra.single_instance import (
+    ERROR_ACCESS_DENIED,
+    SingleInstance,
+    resolve_mutex_name,
+)
 from src.modules.mod_anydesk import AnyDeskInfo
 from src.modules.mod_hardware import HardwareInfo
 from src.modules.mod_network import NetworkInfo
 from src.modules.mod_os import OperativeSystem
 from src.modules.mod_user import UserInformation
-
-# ──────────────────────────────────────────────────────────────────────────────
-# [LEGACY-JSON] Repositorio en crudo (JSON plano).
-# Comenta las siguientes 2 líneas para dejar de usar persistencia en archivo JSON.
-# ──────────────────────────────────────────────────────────────────────────────
+from src.notifications.popup import PopUp, PopUpError, PopUpWarning
 from src.repository.computer_repository import ComputerRepositoryLocal
-
 from src.repository.computer_repository_sqlite import ComputerRepositorySQLite
-from src.repository.computer_repository_mysql import ComputerRepositoryMySQL
-from src.computer_builder import ComputerBuilder
-from src.notifications.popup import PopUp
+
+EXIT_OK = 0
+EXIT_ERROR = 1
+EXIT_CONFIG = 2
+EXIT_ALREADY_RUNNING = 75
 
 
-def main():
-    # ------------------------------------------------------------------
-    # PASO 1: Cargar registros existentes desde JSON (legacy)
-    # ------------------------------------------------------------------
-    # [LEGACY-JSON] Este bloque lee el archivo localStorage.json.
-    # Comenta estas líneas si ya no usas JSON.
-    crl = ComputerRepositoryLocal()
-    current_computer_list = crl.create_computer_list()
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="GENERATE_TECH-SHEET",
+        description="Genera la ficha técnica del equipo actual.",
+    )
+    parser.add_argument(
+        "--allow-multiple",
+        action="store_true",
+        help="omite el mutex de instancia única (solo diagnóstico)",
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="no muestra diálogos ni escribe en consola",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="activa logging DEBUG",
+    )
+    parser.add_argument(
+        "--diagnose",
+        action="store_true",
+        help="muestra la fuente y el valor de cada campo, sin guardar nada",
+    )
+    parser.add_argument(
+        "--sync-only",
+        action="store_true",
+        help="solo sincroniza pendientes, sin capturar",
+    )
+    parser.add_argument(
+        "--capture-only",
+        action="store_true",
+        help="captura sin intentar red",
+    )
+    return parser.parse_args(argv)
 
-    # ------------------------------------------------------------------
-    # PASO 2: Recolectar información del equipo actual
-    # ------------------------------------------------------------------
-    # Se instancian los proveedores de datos y se construye el objeto Computer.
-    new_computer = ComputerBuilder(
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = os.getenv(name, "").strip().lower()
+    if not value:
+        return default
+    return value in {"1", "true", "yes", "on", "si", "sí"}
+
+
+def _acquire_mutex(args: argparse.Namespace) -> tuple[SingleInstance | None, bool]:
+    """Intenta tomar el mutex; devuelve (instancia, adquirido)."""
+    if args.allow_multiple:
+        return None, True
+
+    scope = os.getenv("SINGLE_INSTANCE_SCOPE", "local").strip().lower()
+    instance = SingleInstance(resolve_mutex_name(scope))
+    if instance.acquire():
+        return instance, True
+
+    # Global puede fallar por privilegios: degradar a Local sin bloquear.
+    if scope == "global" and instance.last_error == ERROR_ACCESS_DENIED:
+        fallback = SingleInstance(resolve_mutex_name("local"))
+        if fallback.acquire():
+            return fallback, True
+        instance = fallback
+
+    return instance, False
+
+
+def _build_computer():
+    """Instancia los proveedores y construye la ficha del equipo actual."""
+    return ComputerBuilder(
         anydesk_provider=AnyDeskInfo(),
         user_provider=UserInformation(),
         hardware_provider=HardwareInfo(),
         system_provider=OperativeSystem(),
-        network_provider=NetworkInfo()
+        network_provider=NetworkInfo(),
     ).create_computer()
+
+
+def _diagnose(log) -> int:
+    """Imprime fuentes, valores e incidencias sin persistir nada."""
+    diagnostics.clear()
+    computer = _build_computer()
+    payload = diagnostics.as_dict()
+    payload["computer"] = computer.to_dictionary()
+    text = json.dumps(payload, ensure_ascii=False, indent=2, default=str)
+    print(text)
+    log.info("Diagnóstico ejecutado: %s", ", ".join(sorted(payload["sources"])))
+    return EXIT_OK
+
+
+def _sync_only(args: argparse.Namespace, log) -> int:
+    db_file = sqlite_path()
+    ensure_parent_writable(db_file)
+    sql_repo = ComputerRepositorySQLite(str(db_file))
+    if args.capture_only:
+        return EXIT_OK
+    try:
+        from src.infra.sync import SyncManager
+
+        manager = SyncManager(sql_repo, diagnostics)
+        result = manager.sync_pending()
+        log.info("Sincronización: %s", result)
+        if not args.quiet:
+            PopUp("Aviso", f"Sincronización: {result}")
+    except Exception as exc:  # noqa: BLE001
+        log.exception("Error en sincronización")
+        if not args.quiet:
+            PopUpError("Error de sincronización", str(exc))
+    finally:
+        sql_repo.close()
+    return EXIT_OK
+
+
+def _run(args: argparse.Namespace, log) -> int:
+    # ------------------------------------------------------------------
+    # PASO 1: Cargar registros existentes desde JSON (legacy)
+    # ------------------------------------------------------------------
+    local_repo = ComputerRepositoryLocal()
+    current_computer_list = local_repo.create_computer_list()
+
+    # ------------------------------------------------------------------
+    # PASO 2: Recolectar información del equipo actual
+    # ------------------------------------------------------------------
+    diagnostics.clear()
+    new_computer = _build_computer()
+
+    from datetime import datetime, timezone
+
+    new_computer.captured_at = datetime.now(timezone.utc).isoformat()
 
     # ------------------------------------------------------------------
     # PASO 3: Actualizar/insertar en JSON local (legacy)
     # ------------------------------------------------------------------
-    # [LEGACY-JSON] Este bloque guarda en localStorage.json.
-    # Comenta estas líneas si ya no usas JSON.
-    updated_computer_list = crl.find_and_update_by_mac(current_computer_list, new_computer)
-    crl.save_data_in_file(updated_computer_list)
+    updated_computer_list = local_repo.find_and_update_by_mac(
+        current_computer_list, new_computer
+    )
+    local_repo.save_data_in_file(updated_computer_list)
 
     # ------------------------------------------------------------------
-    # PASO 4: Persistir en SQLite (base de datos local recomendada)
+    # PASO 4: Persistir en SQLite (fuente de verdad local portátil)
     # ------------------------------------------------------------------
-    # SQLite se ejecuta siempre como persistencia local principal.
-    sql_repo = ComputerRepositorySQLite(None)
+    db_file = sqlite_path()
+    ensure_parent_writable(db_file)
+    if migrate_legacy_sqlite() is not None:
+        log.info("Base de datos legacy migrada a %s", db_file)
+    sql_repo = ComputerRepositorySQLite(str(db_file))
     sql_repo.find_and_update_by_mac(new_computer)
+    log.info("Ficha guardada en SQLite: %s", db_file)
+
+    # Sincronización (si está habilitada y no se pidió capturar solo).
+    if not args.capture_only:
+        try:
+            from src.infra.sync import SyncManager
+
+            manager = SyncManager(sql_repo, diagnostics)
+            result = manager.sync_pending()
+            log.info("Sincronización: %s", result)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Sincronización omitida: %s", exc)
 
     # ------------------------------------------------------------------
-    # PASO 5: Evaluar si se debe enviar a MySQL remoto
+    # PASO 5: Enviar a MySQL remoto solo si está habilitado (legacy)
     # ------------------------------------------------------------------
-    # La variable USE_MYSQL_REMOTE controla si se sincroniza con el servidor remoto.
-    # Si es "true", se instancia ComputerRepositoryMySQL y se envían los datos.
-    # Si es "false" (o cualquier otro valor), se omite completamente MySQL.
-    use_mysql = os.getenv("USE_MYSQL_REMOTE", "false").lower().strip()
+    if _env_flag("USE_MYSQL_REMOTE"):
+        # Import perezoso: MySQL es legacy y no debe impedir arrancar sin el
+        # conector instalado cuando la sincronización remota está desactivada.
+        from src.repository.computer_repository_mysql import ComputerRepositoryMySQL
 
-    if use_mysql == "true":
         mysql_repo = ComputerRepositoryMySQL()
         mysql_repo.find_and_update_by_mac(new_computer)
         mysql_repo.close()
@@ -130,8 +258,58 @@ def main():
     # ------------------------------------------------------------------
     # PASO 6: Notificación final al usuario
     # ------------------------------------------------------------------
-    PopUp("Aviso", "¡Ficha guardada correctamente!")
+    log.info("Inventario completado para %s", new_computer.device_name)
+    sql_repo.close()
+    if not args.quiet:
+        PopUp("Aviso", "¡Ficha guardada correctamente!")
+
+    return EXIT_OK
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parse_args(argv)
+
+    # El .env viaja con la aplicación, no se busca en el directorio actual.
+    load_dotenv(dotenv_path=env_file())
+
+    instance, acquired = _acquire_mutex(args)
+    if not acquired:
+        message = "El inventario ya se está generando en otra instancia."
+        if not args.quiet:
+            print(message, file=sys.stderr)
+            PopUpWarning("Ya en ejecución", message)
+        return EXIT_ALREADY_RUNNING if _env_flag("SINGLE_INSTANCE_STRICT") else EXIT_OK
+
+    try:
+        try:
+            log_file = configure_logging(verbose=args.verbose, quiet=args.quiet)
+        except PortablePathError as exc:
+            if not args.quiet:
+                PopUpError("Error de configuración", str(exc))
+            print(f"No se pudo inicializar el logging: {exc}", file=sys.stderr)
+            return EXIT_CONFIG
+
+        log = get_logger("main")
+        log.info("Inicio de la aplicación (log: %s)", log_file)
+        if args.diagnose:
+            return _diagnose(log)
+        if args.sync_only:
+            return _sync_only(args, log)
+        return _run(args, log)
+    except PortablePathError as exc:
+        if not args.quiet:
+            PopUpError("Error de portabilidad", str(exc))
+        print(str(exc), file=sys.stderr)
+        return EXIT_CONFIG
+    except Exception as exc:  # noqa: BLE001 - frontera de la aplicación
+        get_logger("main").exception("Error no controlado")
+        if not args.quiet:
+            PopUpError("Error inesperado", f"No se pudo completar el inventario: {exc}")
+        return EXIT_ERROR
+    finally:
+        if instance is not None:
+            instance.release()
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
