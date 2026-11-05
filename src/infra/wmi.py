@@ -158,6 +158,8 @@ def collect_storage_drives(system_drive: str | None = None) -> list[StorageDrive
     drives: dict[str, StorageDrive] = {}
 
     try:
+        import win32com.client
+
         locator = win32com.client.Dispatch("WbemScripting.SWbemLocator")
         svc = locator.ConnectServer(".", "root\\cimv2")
 
