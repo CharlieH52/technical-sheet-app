@@ -1,5 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from src.models.ram import DimmRam
+from src.models.storage import StorageDrive
 
 @dataclass
 class Computer:
@@ -15,6 +16,11 @@ class Computer:
     storage_cap: int | None
     anydesk_id: int | None
     dimm_list: list[DimmRam]
+    storage_list: list[StorageDrive] = field(default_factory=list)
+
+    @property
+    def storage_count(self) -> int:
+        return len(self.storage_list)
 
     def to_dictionary(self) -> dict[str, str | int | list | None]:
         return {
@@ -29,5 +35,7 @@ class Computer:
             'operative_system': self.operative_system,
             'storage_model': self.storage_model,
             'storage_cap': self.storage_cap,
-            'dimm_list': [dimm_obj.to_dictionary() for dimm_obj in self.dimm_list]
+            'dimm_list': [dimm_obj.to_dictionary() for dimm_obj in self.dimm_list],
+            'storage_list': [drive.to_dictionary() for drive in self.storage_list],
+            'storage_count': self.storage_count,
         }

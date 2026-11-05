@@ -23,5 +23,6 @@ class ComputerBuilder:
             storage_model = self.hardware.get_disk_model(),
             storage_cap= self.hardware.get_disk_cap(),
             anydesk_id = self.anydesk.get_anydesk_desktop_id(),
-            dimm_list = self.hardware.create_ram_objects()
+            dimm_list = self.hardware.create_ram_objects(),
+            storage_list = self.hardware.get_storage_list()
             )

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 from src.models.computer import Computer
 from src.models.ram import DimmRam
+from src.models.storage import StorageDrive
 from src.infra.logging import get_logger
 from src.notifications.popup import PopUpWarning
 
@@ -100,15 +101,41 @@ class ComputerRepositorySQLite:
         );
         """
 
+        create_storage_drive_table = """
+        CREATE TABLE IF NOT EXISTS storage_drive (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            machine_mac TEXT NOT NULL,
+            device_id TEXT NOT NULL,
+            model TEXT,
+            serial_number TEXT,
+            size_bytes INTEGER,
+            interface_type TEXT,
+            media_type TEXT,
+            partitions INTEGER,
+            drive_letters TEXT,
+            is_system INTEGER DEFAULT 0,
+            FOREIGN KEY (machine_mac) REFERENCES computers(machine_mac)
+                ON DELETE CASCADE
+                ON UPDATE CASCADE
+        );
+        """
+
         create_index = """
         CREATE INDEX IF NOT EXISTS idx_dimm_mac ON dimm_ram(machine_mac);
+        """
+
+        create_storage_index = """
+        CREATE INDEX IF NOT EXISTS idx_storage_mac ON storage_drive(machine_mac);
         """
 
         try:
             with self._get_connection() as conn:
                 conn.execute(create_computers_table)
                 conn.execute(create_dimm_ram_table)
+                conn.execute(create_storage_drive_table)
                 conn.execute(create_index)
+                conn.execute(create_storage_index)
+                conn.execute("PRAGMA user_version = 2;")
                 conn.commit()
             self._migrate_legacy_macs()
         except sqlite3.Error as e:
@@ -162,8 +189,8 @@ class ComputerRepositorySQLite:
     # ------------------------------------------------------------------
     # ------------------------------------------------------------------
 
-    def _row_to_computer(self, row: sqlite3.Row, dimm_list: list[DimmRam]) -> Computer:
-        """Convierte una fila de SQLite + lista de DimmRam en un objeto Computer."""
+    def _row_to_computer(self, row: sqlite3.Row, dimm_list: list[DimmRam], storage_list: list[StorageDrive] | None = None) -> Computer:
+        """Convierte una fila de SQLite + listas en un objeto Computer."""
         return Computer(
             device_name=row["device_name"],
             user_name=row["user_name"],
@@ -176,7 +203,22 @@ class ComputerRepositorySQLite:
             storage_model=row["storage_model"],
             storage_cap=row["storage_cap"],
             anydesk_id=row["anydesk_id"],
-            dimm_list=dimm_list
+            dimm_list=dimm_list,
+            storage_list=storage_list or [],
+        )
+
+    def _row_to_storage_drive(self, row: sqlite3.Row) -> StorageDrive:
+        letters = [item for item in (row["drive_letters"] or "").split(",") if item]
+        return StorageDrive(
+            device_id=row["device_id"],
+            model=row["model"],
+            serial_number=row["serial_number"],
+            size_bytes=row["size_bytes"],
+            interface_type=row["interface_type"],
+            media_type=row["media_type"],
+            partitions=row["partitions"],
+            drive_letters=letters,
+            is_system=bool(row["is_system"]),
         )
 
     def _row_to_dimm_ram(self, row: sqlite3.Row) -> DimmRam:
@@ -228,8 +270,20 @@ class ComputerRepositorySQLite:
             dimm.configured_voltage
         )
 
-    # ------------------------------------------------------------------
-    # CRUD público
+    def _storage_drive_to_tuple(self, drive: StorageDrive, machine_mac: str) -> tuple:
+        """Serializa un StorageDrive a tupla para INSERT."""
+        return (
+            machine_mac,
+            drive.device_id,
+            drive.model,
+            drive.serial_number,
+            drive.size_bytes,
+            drive.interface_type,
+            drive.media_type,
+            drive.partitions,
+            ",".join(drive.drive_letters),
+            1 if drive.is_system else 0,
+        )
     # ------------------------------------------------------------------
 
     def create(self, computer: Computer) -> None:
@@ -253,10 +307,19 @@ class ComputerRepositorySQLite:
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
 
+        insert_storage = """
+        INSERT INTO storage_drive (
+            machine_mac, device_id, model, serial_number, size_bytes,
+            interface_type, media_type, partitions, drive_letters, is_system
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """
+
         with self._get_connection() as conn:
             conn.execute(insert_computer, self._computer_to_tuple(computer))
             for dimm in computer.dimm_list:
                 conn.execute(insert_dimm, self._dimm_ram_to_tuple(dimm, computer.machine_mac))
+            for drive in computer.storage_list:
+                conn.execute(insert_storage, self._storage_drive_to_tuple(drive, computer.machine_mac))
             conn.commit()
 
     def read_all(self) -> list[Computer]:
@@ -274,7 +337,14 @@ class ComputerRepositorySQLite:
                 )
                 dimm_rows = dimm_cursor.fetchall()
                 dimm_list = [self._row_to_dimm_ram(d) for d in dimm_rows]
-                computers.append(self._row_to_computer(row, dimm_list))
+
+                storage_cursor = conn.execute(
+                    "SELECT * FROM storage_drive WHERE machine_mac = ?;", (mac,)
+                )
+                storage_list = [
+                    self._row_to_storage_drive(s) for s in storage_cursor.fetchall()
+                ]
+                computers.append(self._row_to_computer(row, dimm_list, storage_list))
 
         return computers
 
@@ -292,7 +362,12 @@ class ComputerRepositorySQLite:
                 "SELECT * FROM dimm_ram WHERE machine_mac = ?;", (machine_mac,)
             )
             dimm_list = [self._row_to_dimm_ram(d) for d in dimm_cursor.fetchall()]
-            return self._row_to_computer(row, dimm_list)
+
+            storage_cursor = conn.execute(
+                "SELECT * FROM storage_drive WHERE machine_mac = ?;", (machine_mac,)
+            )
+            storage_list = [self._row_to_storage_drive(s) for s in storage_cursor.fetchall()]
+            return self._row_to_computer(row, dimm_list, storage_list)
 
     def update(self, computer: Computer) -> bool:
         """
@@ -351,6 +426,18 @@ class ComputerRepositorySQLite:
             """
             for dimm in computer.dimm_list:
                 conn.execute(insert_dimm, self._dimm_ram_to_tuple(dimm, computer.machine_mac))
+
+            # Reemplazar unidades de almacenamiento (borrar e insertar)
+            conn.execute("DELETE FROM storage_drive WHERE machine_mac = ?;", (computer.machine_mac,))
+
+            insert_storage = """
+            INSERT INTO storage_drive (
+                machine_mac, device_id, model, serial_number, size_bytes,
+                interface_type, media_type, partitions, drive_letters, is_system
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            """
+            for drive in computer.storage_list:
+                conn.execute(insert_storage, self._storage_drive_to_tuple(drive, computer.machine_mac))
 
             conn.commit()
             return True

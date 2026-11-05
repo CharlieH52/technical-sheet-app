@@ -49,6 +49,7 @@ except ImportError:  # pragma: no cover
 from src.notifications.popup import PopUp, PopUpError, PopUpWarning, ErrorLogger
 from src.models.computer import Computer
 from src.models.ram import DimmRam
+from src.models.storage import StorageDrive
 
 
 class ComputerRepositoryLocal:
@@ -177,7 +178,8 @@ class ComputerRepositoryLocal:
             storage_model=computer_data.get("storage_model"),
             storage_cap=computer_data.get("storage_cap"),
             anydesk_id=computer_data.get("anydesk_id"),
-            dimm_list=obj_dimm_list
+            dimm_list=obj_dimm_list,
+            storage_list=self.create_storage_drive_list(computer_data.get("storage_list") or [])
         )
 
     def create_dimm_ram_list(self, dimm_data: list[dict[str, Any]]) -> list[DimmRam]:
@@ -213,6 +215,26 @@ class ComputerRepositoryLocal:
             )
             obj_dimm_list.append(dimm_object)
         return obj_dimm_list
+
+    def create_storage_drive_list(self, storage_data: list[dict[str, Any]]) -> list[StorageDrive]:
+        obj_list: list[StorageDrive] = []
+        for item in storage_data or []:
+            if not isinstance(item, dict):
+                continue
+            obj_list.append(
+                StorageDrive(
+                    device_id=item.get("device_id"),
+                    model=item.get("model"),
+                    serial_number=item.get("serial_number"),
+                    size_bytes=item.get("size_bytes"),
+                    interface_type=item.get("interface_type"),
+                    media_type=item.get("media_type"),
+                    partitions=item.get("partitions"),
+                    drive_letters=list(item.get("drive_letters") or []),
+                    is_system=bool(item.get("is_system")),
+                )
+            )
+        return obj_list
 
     def create_computer_list(self) -> list[Computer]:
         """
@@ -284,7 +306,8 @@ class ComputerRepositoryLocal:
                 "operative_system": computer.operative_system,
                 "storage_model": computer.storage_model,
                 "storage_cap": computer.storage_cap,
-                "dimm_list": dimm_serialized_list
+                "dimm_list": dimm_serialized_list,
+                "storage_list": [drive.to_dictionary() for drive in computer.storage_list],
             }
             serialized_computer_list.append(computer_dict)
         return serialized_computer_list
