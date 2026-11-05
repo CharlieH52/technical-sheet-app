@@ -9,7 +9,14 @@ tenían reemplazo nativo.
 from src.command_processor import CommandProcessor
 from src.infra.diagnostics import diagnostics
 from src.infra.hardware_registry import read_cpu_name, read_motherboard
+from src.infra.diskinfo import read_system_disk
+from src.infra.units import bytes_to_gib
 from src.models.ram import DimmRam
+
+try:  # pragma: no cover - psutil es dependencia obligatoria
+    import psutil
+except ImportError:  # pragma: no cover
+    psutil = None
 
 
 class HardwareInfo:
@@ -27,6 +34,32 @@ class HardwareInfo:
         diagnostics.record("cpu_info", cpu_name, cpu_source)
         diagnostics.record("mobo_mark", board.manufacturer, board.source)
         diagnostics.record("mobo_model", board.product, board.source)
+
+        # RAM total y disco del sistema con psutil (sin PowerShell).
+        self.ram_total_bytes = None
+        self.ram_total_gib = None
+        if psutil is not None:
+            try:
+                self.ram_total_bytes = int(psutil.virtual_memory().total)
+                self.ram_total_gib = bytes_to_gib(self.ram_total_bytes)
+            except Exception as exc:  # noqa: BLE001 - psutil puede fallar
+                diagnostics.warn(f"psutil.virtual_memory no disponible: {exc}")
+        diagnostics.record("ram_total_gib", self.ram_total_gib, "psutil")
+
+        self.system_disk = read_system_disk()
+        diagnostics.record(
+            "system_drive", self.system_disk.drive, self.system_disk.source
+        )
+        diagnostics.record(
+            "system_disk_total_gib",
+            bytes_to_gib(self.system_disk.total_bytes),
+            "psutil",
+        )
+        diagnostics.record(
+            "system_disk_free_gib",
+            bytes_to_gib(self.system_disk.free_bytes),
+            "psutil",
+        )
 
         # Pendiente de migrar a WMI COM / psutil en las siguientes etapas.
         self.class_diskdrive = [
@@ -99,6 +132,13 @@ class HardwareInfo:
         if total_bytes is None:
             return None
         return int(total_bytes / (1024 ** 3))
+
+    # RAM total (psutil) y disco del sistema.
+    def get_ram_total_gib(self) -> int | None:
+        return self.ram_total_gib
+
+    def get_system_drive(self) -> str | None:
+        return self.system_disk.drive if getattr(self, "system_disk", None) else None
 
     # CPU
     # Obtain the full name and the main specs about the processor.

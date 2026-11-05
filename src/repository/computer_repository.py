@@ -40,6 +40,12 @@ from typing import Any
 from socket import gethostname
 
 from src.infra.paths import data_dir, ensure_writable_dir
+
+try:
+    from src.infra.netinfo import normalize_mac
+except ImportError:  # pragma: no cover
+    def normalize_mac(value):
+        return value
 from src.notifications.popup import PopUp, PopUpError, PopUpWarning, ErrorLogger
 from src.models.computer import Computer
 from src.models.ram import DimmRam
@@ -430,10 +436,13 @@ class ComputerRepositoryLocal:
             Lista actualizada de objetos Computer lista para ser guardada.
         """
         for computer in current_records:
-            if computer.machine_mac != new_registry.machine_mac:
+            if normalize_mac(computer.machine_mac) != normalize_mac(
+                new_registry.machine_mac
+            ):
                 continue
 
             # MAC coincidente encontrada: actualizar registro existente.
+            computer.machine_mac = new_registry.machine_mac
             computer.dimm_list = self.update_dimm_list(
                 computer.dimm_list,
                 new_registry.dimm_list

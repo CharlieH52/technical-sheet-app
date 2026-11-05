@@ -1,15 +1,20 @@
-from src.command_processor import CommandProcessor
+"""Información del usuario de la sesión basada en ``getpass`` y el registro."""
+
+from src.infra.diagnostics import diagnostics
+from src.infra.userinfo import read_user_identity
+
 
 class UserInformation:
     def __init__(self):
-        self.command_netconfig = ['powershell', 'get-ciminstance -class Win32_NetworkLoginProfile | Select-Object * | Where-Object { $_.UserType -like "Normal Account" } | Format-List']
-        self.useraccount = CommandProcessor(self.command_netconfig).get_output_dictionary()
-    
-    def get_domain_name(self):
-        return self.useraccount.get("Name")
+        self.identity = read_user_identity()
+        diagnostics.record("user_name", self.identity.qualified, self.identity.source)
 
-    def get_user_name(self):
-        return self.useraccount.get("Caption")
+    def get_domain_name(self) -> str | None:
+        """Nombre calificado ``DOMINIO\\usuario`` (consume ComputerBuilder)."""
+        return self.identity.qualified
 
-    def get_full_name(self):
-        return self.useraccount.get("FullName")
+    def get_user_name(self) -> str | None:
+        return self.identity.username
+
+    def get_full_name(self) -> str | None:
+        return self.identity.full_name

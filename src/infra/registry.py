@@ -62,3 +62,28 @@ def read_dword(root: int, path: str, name: str, *, view: int = 64) -> int | None
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def list_subkeys(root: int, path: str, *, view: int = 64) -> list[str]:
+    """Devuelve los nombres de las subclaves de ``path`` (lista vacía si falla)."""
+    if winreg is None:
+        return []
+    try:
+        with winreg.OpenKey(root, path, 0, _access(view)) as key:
+            count = winreg.QueryInfoKey(key)[0]
+            return [winreg.EnumKey(key, index) for index in range(count)]
+    except OSError:
+        return []
+
+
+def as_list(value: Any) -> list[str]:
+    """Normaliza un valor REG_SZ/REG_MULTI_SZ a una lista de cadenas limpias."""
+    if value is None:
+        return []
+    values = value if isinstance(value, (list, tuple)) else [value]
+    result: list[str] = []
+    for item in values:
+        text = str(item).strip()
+        if text:
+            result.append(text)
+    return result

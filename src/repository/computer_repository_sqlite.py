@@ -1,10 +1,19 @@
+from __future__ import annotations
+
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 from src.models.computer import Computer
 from src.models.ram import DimmRam
 from src.infra.logging import get_logger
 from src.notifications.popup import PopUpWarning
+
+try:
+    from src.infra.netinfo import normalize_mac
+except ImportError:  # pragma: no cover - psutil no disponible
+    def normalize_mac(value):
+        return value
 
 
 class ComputerRepositorySQLite:
@@ -38,11 +47,19 @@ class ComputerRepositorySQLite:
         ensure_parent_writable(Path(self.DB_NAME))
         self._init_database()
 
+    @contextmanager
     def _get_connection(self) -> sqlite3.Connection:
-        """Retorna una conexión a la base de datos con row_factory configurado."""
+        """Retorna una conexión a la base de datos con row_factory configurado.
+
+        Se cierra automáticamente al salir del bloque ``with``, evitando que los
+        archivos queden bloqueados en Windows (importante para tests y USB).
+        """
         conn = sqlite3.connect(self.DB_NAME)
         conn.row_factory = sqlite3.Row
-        return conn
+        try:
+            yield conn
+        finally:
+            conn.close()
 
     def _init_database(self) -> None:
         """Crea las tablas si no existen."""
@@ -93,6 +110,7 @@ class ComputerRepositorySQLite:
                 conn.execute(create_dimm_ram_table)
                 conn.execute(create_index)
                 conn.commit()
+            self._migrate_legacy_macs()
         except sqlite3.Error as e:
             # La capa de datos no muestra diálogos: registra y deja que main
             # decida cómo informar (--quiet no debe abrir ventanas).
@@ -101,8 +119,47 @@ class ComputerRepositorySQLite:
             )
             raise
 
+    def _migrate_legacy_macs(self) -> None:
+        """Migra MAC con guiones al formato normalizado con dos puntos."""
+        logger = get_logger("repository.sqlite")
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute("SELECT machine_mac FROM computers;").fetchall()
+                for row in rows:
+                    old_mac = row["machine_mac"]
+                    new_mac = normalize_mac(old_mac)
+                    if not new_mac or new_mac == old_mac:
+                        continue
+
+                    existing = conn.execute(
+                        "SELECT 1 FROM computers WHERE machine_mac = ?;", (new_mac,)
+                    ).fetchone()
+                    if existing:
+                        logger.warning(
+                            "MAC %s ya existe en formato normalizado; se elimina %s",
+                            new_mac,
+                            old_mac,
+                        )
+                        conn.execute(
+                            "DELETE FROM dimm_ram WHERE machine_mac = ?;", (old_mac,)
+                        )
+                        conn.execute(
+                            "DELETE FROM computers WHERE machine_mac = ?;", (old_mac,)
+                        )
+                    else:
+                        conn.execute(
+                            "UPDATE computers SET machine_mac = ? WHERE machine_mac = ?;",
+                            (new_mac, old_mac),
+                        )
+                        conn.execute(
+                            "UPDATE dimm_ram SET machine_mac = ? WHERE machine_mac = ?;",
+                            (new_mac, old_mac),
+                        )
+                conn.commit()
+        except sqlite3.Error as exc:
+            logger.error("No se pudo migrar el formato de MAC: %s", exc)
+
     # ------------------------------------------------------------------
-    # Conversores: Modelo <-> Diccionario <-> SQLite Row
     # ------------------------------------------------------------------
 
     def _row_to_computer(self, row: sqlite3.Row, dimm_list: list[DimmRam]) -> Computer:
