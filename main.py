@@ -43,17 +43,20 @@ USO
   GENERATE_TECH-SHEET.exe --allow-multiple   (diagnóstico; omite el mutex)
   GENERATE_TECH-SHEET.exe --quiet            (sin diálogos ni consola)
   GENERATE_TECH-SHEET.exe --verbose          (logging DEBUG)
+  GENERATE_TECH-SHEET.exe --diagnose         (fuente y valor de cada campo)
 
 ================================================================================
 """
 
 import argparse
+import json
 import os
 import sys
 
 from dotenv import load_dotenv
 
 from src.computer_builder import ComputerBuilder
+from src.infra.diagnostics import diagnostics
 from src.infra.logging import configure_logging, get_logger
 from src.infra.paths import (
     PortablePathError,
@@ -102,6 +105,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="activa logging DEBUG",
     )
+    parser.add_argument(
+        "--diagnose",
+        action="store_true",
+        help="muestra la fuente y el valor de cada campo, sin guardar nada",
+    )
     return parser.parse_args(argv)
 
 
@@ -132,6 +140,29 @@ def _acquire_mutex(args: argparse.Namespace) -> tuple[SingleInstance | None, boo
     return instance, False
 
 
+def _build_computer():
+    """Instancia los proveedores y construye la ficha del equipo actual."""
+    return ComputerBuilder(
+        anydesk_provider=AnyDeskInfo(),
+        user_provider=UserInformation(),
+        hardware_provider=HardwareInfo(),
+        system_provider=OperativeSystem(),
+        network_provider=NetworkInfo(),
+    ).create_computer()
+
+
+def _diagnose(log) -> int:
+    """Imprime fuentes, valores e incidencias sin persistir nada."""
+    diagnostics.clear()
+    computer = _build_computer()
+    payload = diagnostics.as_dict()
+    payload["computer"] = computer.to_dictionary()
+    text = json.dumps(payload, ensure_ascii=False, indent=2, default=str)
+    print(text)
+    log.info("Diagnóstico ejecutado: %s", ", ".join(sorted(payload["sources"])))
+    return EXIT_OK
+
+
 def _run(args: argparse.Namespace, log) -> int:
     # ------------------------------------------------------------------
     # PASO 1: Cargar registros existentes desde JSON (legacy)
@@ -142,13 +173,8 @@ def _run(args: argparse.Namespace, log) -> int:
     # ------------------------------------------------------------------
     # PASO 2: Recolectar información del equipo actual
     # ------------------------------------------------------------------
-    new_computer = ComputerBuilder(
-        anydesk_provider=AnyDeskInfo(),
-        user_provider=UserInformation(),
-        hardware_provider=HardwareInfo(),
-        system_provider=OperativeSystem(),
-        network_provider=NetworkInfo(),
-    ).create_computer()
+    diagnostics.clear()
+    new_computer = _build_computer()
 
     # ------------------------------------------------------------------
     # PASO 3: Actualizar/insertar en JSON local (legacy)
@@ -216,6 +242,8 @@ def main(argv: list[str] | None = None) -> int:
 
         log = get_logger("main")
         log.info("Inicio de la aplicación (log: %s)", log_file)
+        if args.diagnose:
+            return _diagnose(log)
         return _run(args, log)
     except PortablePathError as exc:
         if not args.quiet:
